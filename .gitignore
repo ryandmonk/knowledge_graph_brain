@@ -9,6 +9,7 @@ pnpm-debug.log*
 CLAUDE.md
 TODO.md
 init-prompt.md
+extract_to_neo4j.py
 
 # Runtime data
 pids/
