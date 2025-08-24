@@ -4,6 +4,7 @@ import { server } from './capabilities';
 import { initDriver } from './ingest';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { randomUUID } from 'crypto';
+import { syncStatusHandler, runsHandler, getSystemStatus } from './status/index.js';
 
 // Initialize Neo4j driver
 initDriver();
@@ -116,6 +117,19 @@ app.post('/api/search-graph', async (req: Request, res: Response) => {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
+
+// Status API endpoints
+app.get('/api/status', async (req: Request, res: Response) => {
+  try {
+    const status = await getSystemStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.get('/api/sync-status/:kb_id', syncStatusHandler);
+app.get('/api/runs/:kb_id?', runsHandler);
 
 // Set up the MCP endpoint
 app.post('/mcp', async (req: Request, res: Response) => {

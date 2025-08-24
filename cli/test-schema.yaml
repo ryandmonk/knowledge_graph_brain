@@ -1,0 +1,41 @@
+kb_id: test-kb
+embedding:
+  provider: "ollama:mxbai-embed-large"
+  chunking:
+    strategy: "by_fields"
+    fields: ["title", "description"]
+
+schema:
+  nodes:
+    - label: Document
+      key: id
+      props: ["title", "content", "created_at"]
+    - label: Author
+      key: email
+      props: ["name", "email", "department"]
+
+  relationships:
+    - type: AUTHORED_BY
+      from: Document
+      to: Author
+      props: ["created_at"]
+
+mappings:
+  sources:
+    - source_id: test-source
+      document_type: article
+      extract:
+        node: Document
+        assign:
+          id: "$.id"
+          title: "$.title"
+          content: "$.body"
+          created_at: "$.created_at"
+      edges:
+        - type: AUTHORED_BY
+          from:
+            node: Document
+            key: "$.id"
+          to:
+            node: Author
+            key: "$.author.email"

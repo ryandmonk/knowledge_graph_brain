@@ -4,7 +4,7 @@
 # Knowledge Graph Brain
 </div>
 
-- **Unifies Data Silos**: Connects Confluence, APIs, databases, and more into a single knowledge graph.  
+- **Unifies Data Silos**: Connects APIs, databases, document systems, and any data source into a single knowledge graph.  
 - **Trustworthy RAG**: Hybrid semantic + graph search with full provenance and citations for compliance.  
 - **Privacy-First**: 100% local AI (Ollama) or cloud AI (OpenAI) — your choice for embeddings.  
 - **Production-Ready**: Dockerized, TypeScript-based, extensible with pluggable schemas and connectors.  
@@ -21,7 +21,7 @@ A **production-ready** MCP-based knowledge graph orchestrator that ingests data 
 
 ## 🎯 What This System Does
 
-- **📥 Multi-Source Ingestion**: Connects to Confluence, databases, APIs, or custom sources via pluggable connectors  
+- **📥 Multi-Source Ingestion**: Connects to document systems, databases, APIs, or any data source via pluggable connectors  
 - **🗺️ Smart Mapping**: Declarative YAML schemas with JSONPath expressions for mapping to graph structures  
 - **🧠 Knowledge Graph**: Stores structured data in Neo4j with provenance (source_id, run_id, timestamps)  
 - **🔍 Vector Search**: Local Ollama embeddings for semantic similarity search (no external API required)  
@@ -36,9 +36,9 @@ A **production-ready** MCP-based knowledge graph orchestrator that ingests data 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Data Sources  │────│   Orchestrator   │────│    Neo4j DB     │
-│ • Confluence    │    │ • Schema Parser  │    │ • Graph Data    │
-│ • Retail APIs   │    │ • MCP Server     │    │ • Embeddings    │
-│ • Custom APIs   │    │ • Ingest Engine  │    │ • Provenance    │
+│ • Document Sys  │    │ • Schema Parser  │    │ • Graph Data    │
+│ • Enterprise DB │    │ • MCP Server     │    │ • Embeddings    │
+│ • APIs & Files  │    │ • Ingest Engine  │    │ • Provenance    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │
                        ┌──────────────────┐
@@ -101,7 +101,7 @@ docker-compose up -d neo4j
 ```bash
 cd langgraph/graph_rag_agent
 npm install && npm run build
-npm run dev "What documents are available?" "confluence-demo"
+npm run dev "What documents are available?" "retail-demo"
 ```
 
 ---
@@ -119,7 +119,7 @@ npm run dev "What documents are available?" "confluence-demo"
 ## 🏢 Why Enterprises Need This
 
 ### Problems Solved
-1. **Data Silos** — unify Confluence, Jira, Salesforce, ServiceNow, Slack, etc.  
+1. **Data Silos** — unify document systems, databases, CRM, ticketing, messaging platforms, etc.  
    > *Example: "Show me all projects where customer complaints intersect with product design changes in the last 6 months."*  
 
 2. **Structured + Unstructured Data** — Graph + embeddings captures both.  
@@ -133,10 +133,12 @@ npm run dev "What documents are available?" "confluence-demo"
 - **Agent-Ready Foundation** for LangGraph, CrewAI, autonomous workflows  
 
 ### Real Use Cases
-- **Pharma R&D**: Papers + trials + lab notes → toxicity insights  
-- **Retail**: Orders + tickets → high-return SKUs flagged  
-- **Banking**: Transactions + comms → compliance risk detection  
-- **Software**: Jira + GitHub + Slack → decision traceability  
+- **Healthcare**: Research papers + clinical trials + lab notes → treatment insights  
+- **Financial Services**: Transaction data + regulatory docs → compliance risk detection  
+- **Retail & E-commerce**: Orders + support tickets → high-return product insights  
+- **Software Development**: Code repos + documentation + communications → decision traceability  
+- **Manufacturing**: Process docs + quality reports → operational optimization  
+- **Legal & Compliance**: Case law + contracts + policies → regulatory analysis  
 
 ---
 
@@ -163,9 +165,9 @@ npm run dev "What documents are available?" "confluence-demo"
 
 ### With LangGraph Agent
 ```bash
-npm run dev "Who are the authors and what expertise do they have?" "confluence-demo"
-npm run dev "Find content about knowledge graphs" "confluence-demo"
-npm run dev "Show me connections between authors and topics" "confluence-demo"
+npm run dev "Who are the authors and what expertise do they have?" "retail-demo"
+npm run dev "Find content about customer behavior patterns" "retail-demo" 
+npm run dev "Show me connections between products and customer segments" "retail-demo"
 ```
 
 ### Direct API
@@ -173,12 +175,12 @@ npm run dev "Show me connections between authors and topics" "confluence-demo"
 # Semantic search
 curl -X POST http://localhost:3000/api/semantic-search \
   -H "Content-Type: application/json" \
-  -d '{"kb_id":"confluence-demo","text":"knowledge graphs tutorial","top_k":3}'
+  -d '{"kb_id":"retail-demo","text":"customer purchase patterns","top_k":3}'
 
 # Graph query
 curl -X POST http://localhost:3000/api/search-graph \
   -H "Content-Type: application/json" \
-  -d '{"kb_id":"confluence-demo","cypher":"MATCH (d:Document)-[r:AUTHORED_BY]->(p:Person) RETURN d.title,p.name LIMIT 5"}'
+  -d '{"kb_id":"retail-demo","cypher":"MATCH (c:Customer)-[r:PURCHASED]->(p:Product) RETURN c.segment,p.category,COUNT(r) as purchases LIMIT 5"}'
 ```
 
 ---
@@ -215,6 +217,48 @@ embedding:
 embedding:
   provider: "openai:text-embedding-ada-002"
 ```
+
+---
+
+## 📚 Documentation
+
+### Core Documentation
+- **[Architecture Guide](./docs/ARCHITECTURE.md)** - Complete system architecture and design patterns
+- **[API Documentation](./docs/API.md)** - MCP and REST API reference with examples  
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Production deployment for Docker, Kubernetes, and scaling
+- **[CLI Tools Guide](./cli/README.md)** - Professional CLI tools for validation and monitoring
+
+### Schema & Configuration
+- **[DSL Reference](./docs/dsl.md)** - YAML schema language specification
+- **[Connectors Guide](./docs/connectors.md)** - Data source connector development
+- **[GraphRAG Guide](./docs/graphrag.md)** - Intelligent question answering capabilities
+
+### Examples & Testing
+- **[Testing Guide](./TESTING.md)** - Comprehensive testing procedures and validation
+- **[Schema Examples](./examples/)** - Enterprise data source demonstration schemas
+- **[Sample Questions](./langgraph/graph_rag_agent/sample_questions.md)** - Example queries and expected responses
+
+### Project Management
+- **[Changelog](./CHANGELOG.md)** - Detailed release history and feature updates
+- **[TODO & Roadmap](./TODO.md)** - Current status and future development plans
+
+---
+
+## 🔧 Enterprise Features
+
+### ✅ Production Ready (v1.1.0)
+- **Professional CLI Tools**: `kgb validate` and `kgb status` commands with comprehensive error reporting
+- **Schema Validation**: JSON Schema validation with cross-references, JSONPath syntax checking, and security warnings
+- **Operational Monitoring**: Complete status tracking, run metrics, and system health APIs
+- **Database Migrations**: Automated constraint and index management with versioned migrations
+- **Enterprise Documentation**: Comprehensive deployment guides, API docs, and architecture documentation
+
+### 🚀 Core System (v1.0.0)
+- **Privacy-First AI**: Complete local operation with Ollama (no external API dependencies)
+- **Trustworthy RAG**: Full provenance tracking with source attribution and citations
+- **Production Architecture**: Docker deployment, TypeScript codebase, comprehensive testing
+- **Hybrid Intelligence**: Semantic vector search + structured graph queries
+- **Extensible Design**: Pluggable connectors, embedding providers, and schemas
 
 ---
 

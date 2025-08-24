@@ -1,5 +1,6 @@
 import { parse } from 'yaml';
 import { JSONPath } from 'jsonpath-plus';
+import { SchemaDSLValidator } from './validator';
 
 // Define interfaces for our DSL structure
 interface NodeSchema {
@@ -59,65 +60,29 @@ export function parseSchema(yamlString: string): SchemaDSL {
   try {
     const schema = parse(yamlString) as SchemaDSL;
     
-    // Basic validation
-    if (!schema.kb_id) {
-      throw new Error('Schema must have a kb_id');
+    // Use comprehensive validator
+    const validationResult = SchemaDSLValidator.validate(schema);
+    
+    if (!validationResult.valid) {
+      const formattedErrors = SchemaDSLValidator.formatValidationResults(validationResult);
+      throw new Error(`Schema validation failed:
+${formattedErrors}`);
     }
     
-    if (!schema.schema) {
-      throw new Error('Schema must have a schema section');
-    }
-    
-    if (!schema.schema.nodes || !Array.isArray(schema.schema.nodes)) {
-      throw new Error('Schema nodes must be an array');
-    }
-    
-    if (!schema.schema.relationships || !Array.isArray(schema.schema.relationships)) {
-      throw new Error('Schema relationships must be an array');
-    }
-    
-    if (!schema.mappings || !schema.mappings.sources || !Array.isArray(schema.mappings.sources)) {
-      throw new Error('Schema mappings.sources must be an array');
-    }
-    
-    // Validate each node
-    for (const node of schema.schema.nodes) {
-      if (!node.label || !node.key || !node.props) {
-        throw new Error(`Invalid node schema: ${JSON.stringify(node)}`);
-      }
-    }
-    
-    // Validate each relationship
-    for (const rel of schema.schema.relationships) {
-      if (!rel.type || !rel.from || !rel.to) {
-        throw new Error(`Invalid relationship schema: ${JSON.stringify(rel)}`);
-      }
-    }
-    
-    // Validate each mapping source
-    for (const source of schema.mappings.sources) {
-      if (!source.source_id || !source.document_type || !source.extract || !source.edges) {
-        throw new Error(`Invalid mapping source: ${JSON.stringify(source)}`);
-      }
-      
-      if (!source.extract.node || !source.extract.assign) {
-        throw new Error(`Invalid extract in mapping source: ${JSON.stringify(source.extract)}`);
-      }
-      
-      for (const edge of source.edges) {
-        if (!edge.type || !edge.from || !edge.to) {
-          throw new Error(`Invalid edge in mapping source: ${JSON.stringify(edge)}`);
-        }
-      }
+    // Log warnings if any
+    if (validationResult.warnings.length > 0) {
+      const warningMessages = validationResult.warnings
+        .map(w => `⚠️  ${w.field}: ${w.message}`)
+        .join('\n');
+      console.warn(`Schema validation warnings:
+${warningMessages}`);
     }
     
     return schema;
   } catch (error) {
     throw new Error(`Failed to parse schema: ${(error as Error).message}`);
   }
-}
-
-// Function to extract data using JSONPath
+}// Function to extract data using JSONPath
 export function extractData(document: any, path: string): any {
   try {
     const result = JSONPath({ path, json: document });

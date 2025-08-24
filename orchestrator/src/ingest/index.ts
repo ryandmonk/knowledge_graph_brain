@@ -1,4 +1,5 @@
 import neo4j, { Driver, Session } from 'neo4j-driver';
+import { MigrationRunner } from '../migrations/runner';
 
 // Define interfaces for our graph entities
 interface Node {
@@ -28,9 +29,16 @@ const NEO4J_DATABASE = process.env.NEO4J_DATABASE || 'graphbrain';
 
 // Initialize Neo4j driver
 let driver: Driver;
+let migrationRunner: MigrationRunner;
 
 export function initDriver(): void {
   driver = neo4j.driver(NEO4J_URI, neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD));
+  migrationRunner = new MigrationRunner(driver);
+  
+  // Initialize database with migrations on startup
+  migrationRunner.initializeDatabase().catch(error => {
+    console.error('❌ Failed to initialize database:', error);
+  });
 }
 
 export function getDriver(): Driver {
@@ -41,29 +49,41 @@ export function getDriver(): Driver {
 }
 
 // Function to create constraints and vector indexes for a KB
-export async function setupKB(kb_id: string): Promise<void> {
-  const session = getDriver().session({ database: NEO4J_DATABASE });
+export async function setupKB(kb_id: string, schema?: any): Promise<void> {
+  if (!migrationRunner) {
+    throw new Error('Migration runner not initialized. Call initDriver() first.');
+  }
+  
+  console.log(`🔧 Setting up KB: ${kb_id}`);
   
   try {
-    // Create constraints for nodes (assuming each node has a 'key' property)
-    await session.run(`
-      CREATE CONSTRAINT IF NOT EXISTS FOR (n) REQUIRE (n.kb_id, n.key) IS NODE KEY
-    `);
+    // Create KB-specific constraints if schema is provided
+    if (schema) {
+      await migrationRunner.createKBConstraints(kb_id, schema);
+      await migrationRunner.createKBVectorIndexes(kb_id, schema);
+    }
     
-    // Create vector index (this is a simplified example)
-    // In a real implementation, you would need to create one index per embedding dimension
-    // and handle different embedding providers
-    await session.run(`
-      CREATE VECTOR INDEX IF NOT EXISTS ${kb_id}_vector_index
-      FOR (n)
-      ON (n.embedding)
-      OPTIONS {indexConfig: {
-        \`vector.dimensions\`: 768,
-        \`vector.similarity_function\`: 'cosine'
-      }}
-    `);
-  } finally {
-    await session.close();
+    // Register KB metadata
+    const session = getDriver().session({ database: NEO4J_DATABASE });
+    
+    try {
+      await session.run(`
+        MERGE (kb:KnowledgeBase {kb_id: $kb_id})
+        SET kb.updated_at = timestamp(),
+            kb.schema_version = COALESCE(kb.schema_version, 0) + 1
+        ON CREATE SET kb.created_at = timestamp()
+        RETURN kb
+      `, { kb_id });
+      
+      console.log(`✅ KB ${kb_id} setup complete`);
+      
+    } finally {
+      await session.close();
+    }
+    
+  } catch (error) {
+    console.error('Failed to setup KB:', kb_id, error);
+    throw error;
   }
 }
 

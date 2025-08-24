@@ -5,6 +5,7 @@ import { parseSchema, applyMapping } from '../dsl/index.js';
 import { ConnectorClient } from '../connectors/index.js';
 import { mergeNodesAndRels, semanticSearch, executeCypher } from '../ingest/index.js';
 import { EmbeddingProviderFactory } from '../embeddings/index.js';
+import { startRun, updateRunStats, completeRun, addRunError, getKnowledgeBaseStatus } from '../status/index.js';
 
 // Define the structure for our schema
 export interface Schema {
@@ -234,7 +235,11 @@ server.registerTool(
     }
 
     try {
+      // Generate unique run ID
       const run_id = `run-${Date.now()}`;
+      
+      // Start tracking this ingestion run
+      startRun(kb_id, source_id, run_id);
       
       // 1. Call the connector's pull method
       const connector = new ConnectorClient(source.connector_url, source.auth_ref);
@@ -243,31 +248,63 @@ server.registerTool(
       // 2. Find the mapping for this source
       const mapping = schema.mappings.sources.find(s => s.source_id === source_id);
       if (!mapping) {
+        addRunError(run_id, `No mapping found for source '${source_id}' in schema`);
+        completeRun(run_id, 'failed');
         throw new Error(`No mapping found for source '${source_id}' in schema`);
       }
       
       // 3. Apply mapping to extract nodes and relationships
       let totalNodes = 0;
       let totalRels = 0;
+      let processedDocs = 0;
+      const runErrors: string[] = [];
       
       for (const document of documents) {
-        const { nodes, relationships } = applyMapping(document, mapping);
-        
-        // 4. Merge nodes/relationships into Neo4j with provenance
-        const { createdNodes, createdRels } = await mergeNodesAndRels(
-          kb_id,
-          source_id,
-          run_id,
-          nodes,
-          relationships
-        );
-        
-        totalNodes += createdNodes;
-        totalRels += createdRels;
+        try {
+          const { nodes, relationships } = applyMapping(document, mapping);
+          
+          // 4. Merge nodes/relationships into Neo4j with provenance
+          const { createdNodes, createdRels } = await mergeNodesAndRels(
+            kb_id,
+            source_id,
+            run_id,
+            nodes,
+            relationships
+          );
+          
+          totalNodes += createdNodes;
+          totalRels += createdRels;
+          processedDocs++;
+          
+          // Update run stats periodically
+          if (processedDocs % 10 === 0) {
+            updateRunStats(run_id, {
+              nodes_processed: totalNodes,
+              relationships_created: totalRels
+            });
+          }
+          
+        } catch (docError) {
+          const errorMessage = `Failed to process document: ${docError instanceof Error ? docError.message : docError}`;
+          console.error(errorMessage);
+          runErrors.push(errorMessage);
+          addRunError(run_id, errorMessage);
+          // Continue processing other documents
+        }
       }
+      
+      // Final update of run stats
+      updateRunStats(run_id, {
+        nodes_processed: totalNodes,
+        relationships_created: totalRels
+      });
       
       // TODO: 5. Generate embeddings and update vector index
       // TODO: 6. Write detailed provenance records
+      
+      // Complete the run - successful if we processed any docs, failed if all failed
+      const status = processedDocs > 0 ? 'completed' : 'failed';
+      completeRun(run_id, status);
       
       return {
         content: [
@@ -275,10 +312,10 @@ server.registerTool(
             type: 'text',
             text: JSON.stringify({
               run_id,
-              processed: documents.length,
+              processed: processedDocs,
               created_nodes: totalNodes,
               created_rels: totalRels,
-              errors: [],
+              errors: runErrors,
             }),
           },
         ],
@@ -420,23 +457,42 @@ server.registerTool(
     },
   },
   async ({ kb_id }: { kb_id: string }) => {
-    // TODO: Implement actual status tracking
-
-    // For now, we'll just return mock results
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            last_runs: [
-              { run_id: 'run-1', timestamp: '2025-01-01T00:00:00Z', status: 'completed' },
-            ],
-            queue_depth: 0,
-            last_error: null,
-          }),
-        },
-      ],
-    };
+    try {
+      const status = await getKnowledgeBaseStatus(kb_id);
+      
+      if (!status) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Knowledge base '${kb_id}' not found`,
+              }),
+            },
+          ],
+        };
+      }
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(status),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: `Status sync failed: ${error instanceof Error ? error.message : error}`,
+            }),
+          },
+        ],
+      };
+    }
   }
 );
 
