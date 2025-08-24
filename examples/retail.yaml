@@ -1,0 +1,54 @@
+# Retail Schema Example
+
+```yaml
+kb_id: retail-demo
+embedding:
+  provider: "ollama:mxbai-embed-large"
+  chunking:
+    strategy: "by_fields"
+    fields: ["description", "attributes"]
+schema:
+  nodes:
+    - label: Product
+      key: sku
+      props: [sku, name, description, brand, category, price, currency]
+    - label: Order
+      key: order_id
+      props: [order_id, order_date, total, currency]
+    - label: Customer
+      key: email
+      props: [email, name, segment]
+  relationships:
+    - type: CONTAINS
+      from: Order
+      to: Product
+      props: [qty, unit_price]
+    - type: PURCHASED_BY
+      from: Order
+      to: Customer
+mappings:
+  sources:
+    - source_id: "shopify"
+      document_type: "order"
+      extract:
+        node: Order
+        assign:
+          order_id: "$.id"
+          order_date: "$.created_at"
+          total: "$.total_price"
+          currency: "$.currency"
+      edges:
+        - type: CONTAINS
+          from: { node: Order, key: "$.id" }
+          to:
+            node: Product
+            key: "$.line_items[*].sku"
+            props:
+              qty: "$.line_items[*].quantity"
+              unit_price: "$.line_items[*].price"
+        - type: PURCHASED_BY
+          from: { node: Order, key: "$.id" }
+          to:
+            node: Customer
+            key: "$.customer.email"
+```
