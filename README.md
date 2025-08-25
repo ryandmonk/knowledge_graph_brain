@@ -219,7 +219,7 @@ For quick help, see [TESTING.md](./TESTING.md) for setup validation.
 
 ---
 
-## � Enterprise Value
+## 🏢 Enterprise Value
 
 ### Problems Solved
 1. **Data Silos** — unify across document systems, databases, CRMs, ticketing, messaging, etc.  
