@@ -2,7 +2,6 @@
   <img src="./assets/logo.png" alt="Knowledge Graph Brain Logo" width="200"/>
 
 # Knowledge Graph Brain
-</div>
 
 ---
 
@@ -303,7 +302,7 @@ Supports **local Ollama** (`mxbai-embed-large`, `qwen3:8b`, etc.) or **cloud Ope
 ## 👤 Author
 
 Created by **Ryan Dombrowski**  
-[GitHub Profile](https://github.com/ryandmonk)
+[Portfolio](https://www.ryandombrowski.net) • [GitHub](https://github.com/ryandmonk)
 
 ---
 
