@@ -1,0 +1,14 @@
+{
+  "servers": [
+    {
+      "name": "knowledge-graph-brain",
+      "command": "node",
+      "args": [
+        "./dist/index.js"
+      ],
+      "environment": {
+        "ORCHESTRATOR_URL": "http://localhost:3000"
+      }
+    }
+  ]
+}

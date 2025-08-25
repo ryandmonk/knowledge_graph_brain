@@ -26,6 +26,64 @@ An MCP-based orchestrator that ingests data from multiple sources, maps them thr
 
 ---
 
+## 🔌 Universal MCP Integration **NEW**
+
+**Transform any MCP-compatible client into a powerful knowledge graph interface.**
+
+The Universal MCP Server exposes all Knowledge Graph Brain capabilities as standard MCP tools, enabling seamless integration with popular AI interfaces:
+
+### 🔗 Ready for Your Favorite AI Tools
+- **[Open WebUI](https://openwebui.com)**: Chat interface with knowledge graph superpowers
+- **[Claude Desktop](https://claude.ai/desktop)**: Claude with access to your private knowledge  
+- **[VS Code Extensions](https://marketplace.visualstudio.com/search?term=mcp)**: Code with intelligent context from your data
+
+### 🛠️ 16 Powerful Tools in 3 Categories
+
+**🔍 Knowledge Query Tools**
+- `ask_knowledge_graph` - Natural language Q&A with GraphRAG
+- `search_semantic` - Vector similarity search with filtering
+- `search_graph` - Structured Cypher queries  
+- `explore_relationships` - Entity connection exploration
+
+**⚙️ Knowledge Management Tools**
+- `switch_knowledge_base` - Context switching between KBs
+- `list_knowledge_bases` - Browse all available knowledge bases
+- `add_data_source` - Connect GitHub, Slack, Confluence sources
+- `start_ingestion` - Trigger data sync and processing
+- `get_kb_status` - Monitor health and progress
+- `update_schema` - Configure graph structure
+
+**🔎 Discovery Tools**
+- `get_overview` - Comprehensive KB insights and recommendations
+- `explore_schema` - Analyze graph structure and entity types
+- `find_patterns` - Discover centrality, clusters, and anomalies
+- `get_session_info` - View context and query history
+
+### ⚡ Quick Start with MCP
+```bash
+# 1. Build the MCP server
+cd mcp-server && npm install && npm run build
+
+# 2. Generate client configurations  
+npm run config  # Creates configs for Open WebUI, Claude Desktop, VS Code
+
+# 3. Add to your favorite MCP client
+# Example: Open WebUI configuration generated in openWebUI-config.json
+```
+
+### 💬 Natural Conversations About Your Data
+```
+You: "What are the main architecture patterns in our codebase?"
+AI: Using ask_knowledge_graph tool...
+📊 Found 15 architectural documents with high confidence
+🏗️ Key patterns: Microservices (8 mentions), Event-driven (12 mentions)
+📋 Sources: architecture.md, design-decisions.md, api-guide.md
+```
+
+**[👉 See Complete MCP Integration Guide](./mcp-server/README.md)**
+
+---
+
 ## 🏗️ Architecture
 
 ```
@@ -35,21 +93,21 @@ An MCP-based orchestrator that ingests data from multiple sources, maps them thr
 │ • Enterprise DB │    │ • MCP Server     │    │ • Embeddings    │
 │ • APIs & Files  │    │ • Ingest Engine  │    │ • Provenance    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                       ┌──────────────────┐
-                       │  LangGraph Agent │
-                       │ • Semantic Search│
-                       │ • Graph Queries  │
-                       │ • Smart Synthesis│
-                       │ • Ollama LLM     │
-                       └──────────────────┘
-                                │
-                       ┌──────────────────┐
-                       │   Ollama Service │
-                       │ • Local LLM      │
-                       │ • Embeddings     │
-                       │ • No External API│
-                       └──────────────────┘
+                                │                        │
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │  LangGraph Agent │    │ Universal MCP   │
+                       │ • Semantic Search│    │ Server (NEW!)   │
+                       │ • Graph Queries  │    │ • 16 MCP Tools  │
+                       │ • Smart Synthesis│    │ • Session Mgmt  │
+                       │ • Ollama LLM     │    │ • External APIs │
+                       └──────────────────┘    └─────────────────┘
+                                │                        │
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │   Ollama Service │    │ External Clients│
+                       │ • Local LLM      │    │ • Open WebUI    │
+                       │ • Embeddings     │    │ • Claude Desktop│
+                       │ • No External API│    │ • VS Code Ext   │
+                       └──────────────────┘    └─────────────────┘
 ```
 
 ---

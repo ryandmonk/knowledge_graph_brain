@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "knowledge-graph-brain": {
+      "command": "node",
+      "args": [
+        "./dist/index.js"
+      ],
+      "env": {
+        "ORCHESTRATOR_URL": "http://localhost:3000"
+      }
+    }
+  }
+}

@@ -2,9 +2,65 @@
 
 Knowledge Graph Brain exposes multiple API interfaces for different use cases.
 
-## MCP (Model Context Protocol) API
+## 🏗️ System Architecture
 
-The primary interface for AI agents and MCP-compatible clients.
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Data Sources  │────│   Orchestrator   │────│    Neo4j DB     │
+│ • Document Sys  │    │ • Schema Parser  │    │ • Graph Data    │
+│ • Enterprise DB │    │ • MCP Server     │    │ • Embeddings    │
+│ • APIs & Files  │    │ • Ingest Engine  │    │ • Provenance    │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │                        │
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │  LangGraph Agent │    │ Universal MCP   │
+                       │ • Semantic Search│    │ Server (NEW!)   │
+                       │ • Graph Queries  │    │ • 16 MCP Tools  │
+                       │ • Smart Synthesis│    │ • Session Mgmt  │
+                       │ • Ollama LLM     │    │ • External APIs │
+                       └──────────────────┘    └─────────────────┘
+                                │                        │
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │   Ollama Service │    │ External Clients│
+                       │ • Local LLM      │    │ • Open WebUI    │
+                       │ • Embeddings     │    │ • Claude Desktop│
+                       │ • No External API│    │ • VS Code Ext   │
+                       └──────────────────┘    └─────────────────┘
+```
+
+### API Layer Overview
+
+Knowledge Graph Brain provides three complementary API interfaces:
+
+1. **Universal MCP Server** (NEW in v0.11.0) - External client integration via Model Context Protocol
+2. **MCP API** - Internal MCP interface for direct agent communication  
+3. **REST API** - HTTP interface for web applications and integrations
+
+### Universal MCP Server (v0.11.0+)
+
+**Purpose**: Standalone MCP server exposing all Knowledge Graph Brain capabilities as MCP tools for external clients.
+
+**Capabilities**:
+- **16 MCP Tools** across 3 categories (Knowledge Query, Management, Discovery)
+- **Session Management** with persistent context
+- **External Client Integration** for Open WebUI, Claude Desktop, VS Code extensions
+- **Natural Conversation Interface** - clients can use tools through natural language
+
+**Architecture Position**: 
+- Runs as independent process (`/mcp-server/`)
+- Communicates with Orchestrator via REST API
+- Provides MCP protocol compliance for external tool usage
+- Enables non-technical users to access enterprise knowledge graphs
+
+**Key Difference from Internal MCP API**:
+- Internal MCP API: Direct agent-to-orchestrator communication
+- Universal MCP Server: External-client-to-orchestrator bridge with session management
+
+## MCP (Model Context Protocol) API - Internal
+
+The internal MCP interface for direct AI agent and orchestrator communication.
+
+> **Note**: For external MCP client integration (Open WebUI, Claude Desktop, etc.), use the [Universal MCP Server](../mcp-server/README.md) instead. This internal MCP API is designed for direct agent-to-orchestrator communication within the Knowledge Graph Brain ecosystem.
 
 ### Endpoint
 ```
@@ -533,3 +589,19 @@ ws.onmessage = (event) => {
   console.log('Ingestion progress:', update);
 };
 ```
+
+---
+
+## Related Documentation
+
+### Universal MCP Server (v0.11.0+)
+For external MCP client integration with Open WebUI, Claude Desktop, VS Code extensions, and other MCP-compatible applications:
+
+- **[Universal MCP Server Documentation](../mcp-server/README.md)** - Complete setup and usage guide
+- **[Integration Examples](../mcp-server/README.md#client-integration)** - Configuration for popular MCP clients
+- **[16 MCP Tools Reference](../mcp-server/README.md#available-tools)** - Complete tool documentation
+
+### System Documentation
+- **[Architecture Overview](./ARCHITECTURE.md)** - Complete system design and component interactions
+- **[CLI Documentation](./cli.md)** - Command-line interface for system management
+- **[Connector Documentation](./connectors.md)** - Data source integration guides

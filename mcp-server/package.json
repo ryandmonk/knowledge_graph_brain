@@ -1,0 +1,40 @@
+{
+  "name": "knowledge-graph-brain-mcp-server",
+  "version": "1.0.0", 
+  "description": "Universal MCP Server for Knowledge Graph Brain - exposes all capabilities as MCP tools for external clients",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "node integration-test.js examples",
+    "config": "node integration-test.js config",
+    "examples": "node integration-test.js examples",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "knowledge-graph",
+    "rag",
+    "semantic-search",
+    "graph-database"
+  ],
+  "author": "Ryan Dombrowski",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
