@@ -320,6 +320,175 @@ export class SemanticSearchTool extends Tool {
 }
 ```
 
+## **Enhanced Citation Framework** (v0.10.0+)
+
+Knowledge Graph Brain now provides research-grade citation and provenance tracking for all GraphRAG responses.
+
+### **Citation Data Structures**
+
+```typescript
+interface Citation {
+  source_id: string;
+  source_type: 'document' | 'database_record' | 'api_response';
+  title: string;
+  url?: string;
+  confidence_level: 'high' | 'medium' | 'low';
+  relevance_score: number; // 0.0-1.0
+  supporting_evidence: string[];
+  provenance_chain: ProvenanceStep[];
+}
+
+interface ProvenanceStep {
+  step_id: string;
+  operation: 'semantic_search' | 'graph_traversal' | 'inference';
+  timestamp: string;
+  confidence: number;
+  source_nodes: string[];
+  reasoning: string;
+}
+
+interface EnhancedAgentResponse {
+  answer: string;
+  confidence_level: 'high' | 'medium' | 'low';
+  primary_sources: Citation[];
+  supporting_sources: Citation[];
+  reasoning_path: string[];
+  total_sources_consulted: number;
+  provenance_summary: string;
+}
+```
+
+### **Professional Citation Generation**
+
+```typescript
+class CitationFramework {
+  async generateCitations(
+    searchResults: SearchResult[], 
+    graphResults: GraphResult[]
+  ): Promise<Citation[]> {
+    const citations: Citation[] = [];
+    
+    // Process semantic search results
+    for (const result of searchResults) {
+      citations.push({
+        source_id: result.node_id,
+        source_type: 'document',
+        title: result.properties.title,
+        url: result.properties.url,
+        confidence_level: this.calculateConfidence(result.score),
+        relevance_score: result.score,
+        supporting_evidence: [result.content.substring(0, 200)],
+        provenance_chain: [{
+          step_id: `sem_${Date.now()}`,
+          operation: 'semantic_search',
+          timestamp: new Date().toISOString(),
+          confidence: result.score,
+          source_nodes: [result.node_id],
+          reasoning: `Vector similarity match for query with score ${result.score}`
+        }]
+      });
+    }
+    
+    // Process graph traversal results  
+    for (const result of graphResults) {
+      citations.push({
+        source_id: result.node.id,
+        source_type: this.inferSourceType(result.node.labels),
+        title: result.node.properties.name || result.node.properties.title,
+        confidence_level: 'high', // Graph relationships are highly reliable
+        relevance_score: 0.9, // Structural relevance
+        supporting_evidence: this.extractEvidence(result.relationships),
+        provenance_chain: [{
+          step_id: `graph_${Date.now()}`,
+          operation: 'graph_traversal', 
+          timestamp: new Date().toISOString(),
+          confidence: 0.95,
+          source_nodes: result.path.map(n => n.id),
+          reasoning: `Graph relationship traversal via ${result.relationship_type}`
+        }]
+      });
+    }
+    
+    return this.dedupAndRank(citations);
+  }
+  
+  private calculateConfidence(score: number): 'high' | 'medium' | 'low' {
+    if (score > 0.8) return 'high';
+    if (score > 0.6) return 'medium'; 
+    return 'low';
+  }
+}
+```
+
+### **Example Enhanced Response**
+
+```typescript
+// Example output with comprehensive citations
+const response: EnhancedAgentResponse = {
+  answer: "Based on the knowledge graph analysis, there are three key documents about knowledge graphs: the 'Graph Database Fundamentals' guide authored by Dr. Sarah Chen, the 'Neo4j Implementation Patterns' document by the Engineering Team, and the 'Semantic Knowledge Representation' research paper by Dr. Michael Torres.",
+  
+  confidence_level: 'high',
+  
+  primary_sources: [
+    {
+      source_id: "doc-graph-fundamentals",
+      source_type: 'document',
+      title: "Graph Database Fundamentals",
+      url: "https://company.com/docs/graph-fundamentals",
+      confidence_level: 'high',
+      relevance_score: 0.94,
+      supporting_evidence: [
+        "Comprehensive overview of graph database concepts...",
+        "Detailed explanation of node and relationship modeling..."
+      ],
+      provenance_chain: [
+        {
+          step_id: "sem_1703123456789",
+          operation: 'semantic_search',
+          timestamp: "2024-12-20T14:30:56.789Z",
+          confidence: 0.94,
+          source_nodes: ["doc-graph-fundamentals"],
+          reasoning: "Vector similarity match for 'knowledge graphs' with score 0.94"
+        }
+      ]
+    }
+  ],
+  
+  supporting_sources: [
+    {
+      source_id: "person-sarah-chen",
+      source_type: 'database_record', 
+      title: "Dr. Sarah Chen - Author Profile",
+      confidence_level: 'high',
+      relevance_score: 0.85,
+      supporting_evidence: ["Primary author of foundational graph theory documentation"],
+      provenance_chain: [
+        {
+          step_id: "graph_1703123456790",
+          operation: 'graph_traversal',
+          timestamp: "2024-12-20T14:30:57.790Z", 
+          confidence: 0.95,
+          source_nodes: ["doc-graph-fundamentals", "person-sarah-chen"],
+          reasoning: "Graph relationship traversal via AUTHORED_BY relationship"
+        }
+      ]
+    }
+  ],
+  
+  reasoning_path: [
+    "1. Executed semantic search for 'knowledge graphs' - found 3 highly relevant documents",
+    "2. Performed graph traversal to identify document authors and relationships",
+    "3. Cross-referenced document topics and author expertise",
+    "4. Synthesized comprehensive answer with high confidence citations"
+  ],
+  
+  total_sources_consulted: 8,
+  provenance_summary: "Answer derived from 3 primary document sources with 95% confidence through combined semantic search and graph relationship analysis"
+};
+```
+
+This enhanced citation framework ensures every GraphRAG response includes complete source attribution with confidence scoring and detailed provenance chains for research-grade transparency.
+
 ## Query Examples
 
 ### Complex Business Intelligence

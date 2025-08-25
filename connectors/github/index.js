@@ -2,7 +2,7 @@ const express = require('express');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { Octokit } = require('@octokit/rest');
 const cors = require('cors');
-require('dotenv').config();
+const { config } = require('./config');
 
 // Initialize the MCP server for the connector
 const server = new McpServer({
@@ -13,7 +13,7 @@ const server = new McpServer({
 // Initialize GitHub client
 const getOctokit = (auth) => {
   return new Octokit({
-    auth: auth || process.env.GITHUB_TOKEN
+    auth: auth || config.GITHUB_TOKEN
   });
 };
 
@@ -132,6 +132,81 @@ class GitHubAPI {
       return null;
     }
   }
+}
+
+// Demo data for when DEMO_MODE is true or no GITHUB_TOKEN is provided
+function getDemoRepositories() {
+  return [
+    {
+      id: 'repo-demo-1',
+      type: 'repository',
+      title: 'knowledge-graph-demo',
+      description: 'Demo repository showcasing knowledge graph concepts and implementations',
+      content: '# Knowledge Graph Demo\n\nThis is a demonstration repository showing how to build knowledge graphs.\n\n## Features\n- Neo4j integration\n- Graph data modeling\n- Semantic search capabilities\n- Real-time data ingestion\n\n## Getting Started\n\n```bash\nnpm install\nnpm start\n```\n\nSee the documentation for more details.',
+      url: 'https://github.com/demo-org/knowledge-graph-demo',
+      language: 'TypeScript',
+      stars: 1542,
+      forks: 287,
+      created_at: '2023-08-15T10:30:00Z',
+      updated_at: '2025-08-24T15:45:00Z',
+      owner: {
+        login: 'demo-org',
+        type: 'Organization',
+        url: 'https://github.com/demo-org'
+      },
+      topics: ['knowledge-graph', 'neo4j', 'typescript', 'semantic-search'],
+      license: 'MIT',
+      default_branch: 'main',
+      is_private: false,
+      is_fork: false
+    },
+    {
+      id: 'repo-demo-2',
+      type: 'repository',
+      title: 'ai-agent-toolkit',
+      description: 'A comprehensive toolkit for building AI agents with LangChain and knowledge graphs',
+      content: '# AI Agent Toolkit\n\nBuild intelligent agents that can reason over knowledge graphs.\n\n## Components\n- LangChain integration\n- Custom tool development\n- Graph-based reasoning\n- Multi-modal capabilities\n\n## Installation\n\n```python\npip install ai-agent-toolkit\n```\n\n## Quick Example\n\n```python\nfrom ai_toolkit import GraphAgent\n\nagent = GraphAgent(graph_uri="bolt://localhost:7687")\nresponse = agent.query("What are the connections between AI and knowledge graphs?")\nprint(response)\n```',
+      url: 'https://github.com/demo-user/ai-agent-toolkit',
+      language: 'Python',
+      stars: 892,
+      forks: 156,
+      created_at: '2024-01-20T14:20:00Z',
+      updated_at: '2025-08-23T09:15:00Z',
+      owner: {
+        login: 'demo-user',
+        type: 'User',
+        url: 'https://github.com/demo-user'
+      },
+      topics: ['ai', 'langchain', 'agents', 'python', 'knowledge-graphs'],
+      license: 'Apache-2.0',
+      default_branch: 'main',
+      is_private: false,
+      is_fork: false
+    },
+    {
+      id: 'repo-demo-3',
+      type: 'repository',
+      title: 'graph-rag-examples',
+      description: 'Real-world examples of Graph RAG (Retrieval-Augmented Generation) implementations',
+      content: '# Graph RAG Examples\n\nExplore various implementations of Graph RAG across different domains.\n\n## Examples Included\n- Healthcare knowledge graphs\n- Financial data analysis\n- Research paper networks\n- E-commerce recommendations\n\n## Technologies\n- Neo4j\n- OpenAI GPT\n- LangChain\n- Vector embeddings\n\n## Usage\n\nEach example is in its own directory with setup instructions:\n\n```bash\ncd healthcare-example\npython setup.py\npython run_demo.py\n```',
+      url: 'https://github.com/graph-rag-community/examples',
+      language: 'Jupyter Notebook',
+      stars: 2341,
+      forks: 423,
+      created_at: '2023-11-08T16:45:00Z',
+      updated_at: '2025-08-25T11:30:00Z',
+      owner: {
+        login: 'graph-rag-community',
+        type: 'Organization',
+        url: 'https://github.com/graph-rag-community'
+      },
+      topics: ['graph-rag', 'examples', 'jupyter', 'ai', 'tutorials'],
+      license: 'MIT',
+      default_branch: 'main',
+      is_private: false,
+      is_fork: false
+    }
+  ];
 }
 
 // Implement the pull capability as a tool
@@ -375,7 +450,6 @@ server.registerTool('pull', 'Pull data from GitHub repositories', {
 
 // Create an Express app to serve the MCP server
 const app = express();
-const port = process.env.PORT || 3002;
 
 // Enable CORS and JSON parsing
 app.use(cors());
@@ -504,6 +578,18 @@ app.get('/sources', (req, res) => {
 // Simple pull endpoint for testing
 app.get('/pull', async (req, res) => {
   try {
+    console.log('📥 GitHub connector: Pull request received');
+    
+    // Check if we should use demo mode
+    if (config.DEMO_MODE || !config.GITHUB_TOKEN) {
+      console.log('🎭 GitHub: Using DEMO MODE - returning mock repository data');
+      const demoData = getDemoRepositories();
+      res.json(demoData);
+      return;
+    }
+
+    console.log('🔐 GitHub: Using PRODUCTION MODE - fetching real data from GitHub API');
+    
     const { since, owner, repo, data_types } = req.query;
     
     if (!owner) {
@@ -613,14 +699,18 @@ app.post('/mcp', async (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => {
-  console.log(`🐙 GitHub Connector running on port ${port}`);
+app.listen(config.PORT, () => {
+  console.log(`🐙 GitHub Connector running on http://localhost:${config.PORT}`);
   console.log(`📊 Available endpoints:`);
-  console.log(`   GET  http://localhost:${port}/health`);
-  console.log(`   GET  http://localhost:${port}/sources`);
-  console.log(`   GET  http://localhost:${port}/pull?owner=username[&repo=reponame]`);
-  console.log(`   POST http://localhost:${port}/mcp`);
+  console.log(`   GET  http://localhost:${config.PORT}/health`);
+  console.log(`   GET  http://localhost:${config.PORT}/sources`);
+  console.log(`   GET  http://localhost:${config.PORT}/pull?owner=username[&repo=reponame]`);
+  console.log(`   POST http://localhost:${config.PORT}/mcp`);
   console.log('');
-  console.log('🔑 Environment variables:');
-  console.log(`   GITHUB_TOKEN: ${process.env.GITHUB_TOKEN ? '✅ Set' : '❌ Not set'}`);
+  console.log('🔑 Configuration:');
+  console.log(`   DEMO_MODE: ${config.DEMO_MODE ? '🎭 ACTIVE' : '🔐 DISABLED'}`);
+  console.log(`   GITHUB_TOKEN: ${config.GITHUB_TOKEN ? '✅ Set' : '❌ Not set'}`);
+  if (config.DEMO_MODE) {
+    console.log('   Using mock repository data for demonstration purposes');
+  }
 });

@@ -1,0 +1,18 @@
+{
+  "name": "@knowledge-graph-brain/shared",
+  "version": "0.8.0",
+  "description": "Shared configuration and utilities for Knowledge Graph Brain",
+  "main": "dist/config.js",
+  "types": "dist/config.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0"
+  }
+}

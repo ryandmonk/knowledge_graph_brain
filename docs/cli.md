@@ -175,7 +175,8 @@ The CLI tools integrate with the Knowledge Graph Brain orchestrator:
 - Compatible with MCP `register_schema` capability
 
 ### REST API Integration
-- Status commands query orchestrator REST endpoints (`/api/status`, `/api/sync-status`, `/api/runs`)
+- Status commands query orchestrator REST endpoints (`/api/status`, `/api/sync-status`, `/api/runs`, `/api/health`)
+- Enhanced health monitoring with `/api/health` endpoint provides comprehensive system intelligence (v0.10.0+)
 - Real-time operational data from running system
 - Supports custom server URLs for different environments
 

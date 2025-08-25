@@ -568,6 +568,44 @@ RETURN node, score
 /metrics          # Prometheus metrics endpoint
 ```
 
+### **Enhanced Operational Intelligence** (v0.10.0+)
+
+**Professional Health Monitoring** (`/api/health`):
+```typescript
+interface SystemHealth {
+  health_score: number;        // 0-100 performance score
+  status: 'healthy' | 'warning' | 'error';
+  alerts: Alert[];             // Automated issue detection
+  summary: string;             // Executive summary
+  details: {
+    neo4j_connected: boolean;
+    embedding_provider: string;
+    memory_usage_mb: number;
+    uptime_hours: number;
+    active_runs: number;
+    total_errors: number;
+  };
+  knowledge_bases: KnowledgeBaseHealth[];
+}
+```
+
+**Key Capabilities**:
+- **🎯 Health Scoring**: Weighted algorithm considering connectivity, performance, data freshness
+- **🚨 Alert Generation**: Automated detection of Neo4j issues, performance degradation, stale data
+- **📊 Operational Metrics**: Memory usage, uptime tracking, active run monitoring
+- **📈 Knowledge Base Analytics**: Per-KB health status, node type breakdowns, data freshness analysis
+
+**Real-Time Vector Search** (`/api/semantic-search`):
+- **Multi-Provider Support**: Ollama (1024-dim) and OpenAI (1536-dim) embedding integration
+- **Advanced Filtering**: Label and property-based result refinement
+- **Performance Optimization**: Dynamic vector index utilization with provider detection
+
+**Enterprise Features**:
+- **Identity Resolution**: Configurable entity deduplication with similarity thresholds
+- **Security Patterns**: AWS Secrets Manager, HashiCorp Vault, RBAC integration
+- **Citation Framework**: Research-grade provenance chains with confidence scoring
+- **Multi-Provider Testing**: Embedding compatibility validation and migration analysis
+
 ### Alerting Rules
 
 **Critical Alerts**:

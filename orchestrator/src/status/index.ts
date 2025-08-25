@@ -24,6 +24,12 @@ export interface KnowledgeBaseStatus {
   sources: SourceStatus[];
   last_error?: string;
   last_error_at?: number;
+  // Enhanced operational details
+  last_successful_sync?: number;
+  avg_ingestion_time_ms?: number;
+  data_freshness_hours?: number;
+  node_types: Array<{ type: string; count: number }>;
+  health_status: 'healthy' | 'warning' | 'error' | 'stale';
 }
 
 export interface SourceStatus {
@@ -45,6 +51,13 @@ export interface SystemStatus {
   total_nodes: number;
   total_relationships: number;
   knowledge_bases: KnowledgeBaseStatus[];
+  // Enhanced operational details
+  active_runs: number;
+  total_runs_completed: number;
+  total_errors: number;
+  memory_usage?: NodeJS.MemoryUsage;
+  last_activity?: number;
+  health_score: number; // 0-100
 }
 
 // In-memory storage for run statistics (in production, store in Neo4j or external store)
@@ -142,6 +155,17 @@ export async function getKnowledgeBaseStatus(kb_id: string): Promise<KnowledgeBa
     
     const counts = countsResult[0] || { nodeCount: 0, relCount: 0 };
     
+    // Get node type breakdown
+    const nodeTypesResult = await executeCypher(`
+      MATCH (n {kb_id: $kb_id})
+      RETURN labels(n) as labels, count(n) as count
+    `, { kb_id });
+    
+    const nodeTypes = nodeTypesResult.map(record => ({
+      type: record.labels.join(':'),
+      count: record.count
+    }));
+    
     // Get source statistics from recent runs
     const recentRuns = Array.from(runStats.values())
       .filter(run => run.kb_id === kb_id)
@@ -168,10 +192,33 @@ export async function getKnowledgeBaseStatus(kb_id: string): Promise<KnowledgeBa
       }
     }
     
-    // Find last error
+    // Find last error and last successful sync
     const failedRuns = recentRuns.filter(run => run.status === 'failed');
+    const successfulRuns = recentRuns.filter(run => run.status === 'completed');
     const lastFailedRun = failedRuns[0];
+    const lastSuccessfulRun = successfulRuns[0];
     
+    // Calculate average ingestion time
+    const completedRuns = recentRuns.filter(run => run.duration_ms !== undefined);
+    const avgIngestionTime = completedRuns.length > 0 
+      ? completedRuns.reduce((sum, run) => sum + (run.duration_ms || 0), 0) / completedRuns.length
+      : undefined;
+    
+    // Calculate data freshness
+    const dataFreshnessHours = lastSuccessfulRun 
+      ? (Date.now() - lastSuccessfulRun.completed_at!) / (1000 * 60 * 60)
+      : undefined;
+    
+    // Determine health status
+    let healthStatus: 'healthy' | 'warning' | 'error' | 'stale' = 'healthy';
+    if (failedRuns.length > 0 && (!lastSuccessfulRun || failedRuns[0].started_at > lastSuccessfulRun.started_at)) {
+      healthStatus = 'error';
+    } else if (dataFreshnessHours && dataFreshnessHours > 24) {
+      healthStatus = 'stale';
+    } else if (dataFreshnessHours && dataFreshnessHours > 6) {
+      healthStatus = 'warning';
+    }
+
     return {
       kb_id,
       created_at: kb.created_at,
@@ -181,7 +228,13 @@ export async function getKnowledgeBaseStatus(kb_id: string): Promise<KnowledgeBa
       total_relationships: counts.relCount,
       sources: Array.from(sourceStatusMap.values()),
       last_error: lastFailedRun?.errors[0],
-      last_error_at: lastFailedRun?.completed_at
+      last_error_at: lastFailedRun?.completed_at,
+      // Enhanced operational details
+      last_successful_sync: lastSuccessfulRun?.completed_at,
+      avg_ingestion_time_ms: avgIngestionTime,
+      data_freshness_hours: dataFreshnessHours,
+      node_types: nodeTypes,
+      health_status: healthStatus
     };
     
   } catch (error) {
@@ -208,9 +261,9 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     const systemStatsResult = await executeCypher(`
       MATCH (kb:KnowledgeBase)
       WITH count(kb) as kbCount
-      MATCH (n) WHERE EXISTS(n.kb_id)
+      MATCH (n) WHERE n.kb_id IS NOT NULL
       WITH kbCount, count(n) as totalNodes
-      MATCH ()-[r]-() WHERE EXISTS(r.kb_id)
+      MATCH ()-[r]-() WHERE r.kb_id IS NOT NULL
       RETURN kbCount, totalNodes, count(r) as totalRels
     `);
     
@@ -227,6 +280,20 @@ export async function getSystemStatus(): Promise<SystemStatus> {
       }
     }
     
+    // Calculate operational metrics
+    const allRuns = Array.from(runStats.values());
+    const activeRuns = allRuns.filter(run => run.status === 'running').length;
+    const completedRuns = allRuns.filter(run => run.status === 'completed').length;
+    const totalErrors = allRuns.reduce((sum, run) => sum + run.errors.length, 0);
+    const lastActivity = allRuns.length > 0 ? Math.max(...allRuns.map(run => run.completed_at || run.started_at)) : systemStartTime;
+    
+    // Calculate health score (0-100)
+    let healthScore = 100;
+    if (!neo4jConnected) healthScore -= 50; // Major penalty for DB issues
+    if (totalErrors > 0) healthScore -= Math.min(totalErrors * 5, 30); // Errors impact health
+    if (activeRuns > 5) healthScore -= 10; // Too many active runs might indicate issues
+    healthScore = Math.max(0, healthScore);
+
     return {
       service: 'Knowledge Graph Orchestrator',
       version: '1.0.0',
@@ -235,7 +302,14 @@ export async function getSystemStatus(): Promise<SystemStatus> {
       total_kbs: systemStats.kbCount,
       total_nodes: systemStats.totalNodes,
       total_relationships: systemStats.totalRels,
-      knowledge_bases: knowledgeBases
+      knowledge_bases: knowledgeBases,
+      // Enhanced operational metrics
+      active_runs: activeRuns,
+      total_runs_completed: completedRuns,
+      total_errors: totalErrors,
+      memory_usage: process.memoryUsage(),
+      last_activity: lastActivity,
+      health_score: healthScore
     };
     
   } catch (error) {

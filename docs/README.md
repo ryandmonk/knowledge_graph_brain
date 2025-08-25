@@ -2,7 +2,7 @@
 
 Comprehensive documentation for the Knowledge Graph Brain system - a professional MCP-based knowledge graph orchestrator with enterprise features and production-ready deployment capabilities.
 
-## � Documentation Overview
+## 📚 Documentation Overview
 
 The Knowledge Graph Brain documentation is organized by use case and user journey to help you find the information you need quickly:
 
@@ -13,13 +13,17 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 
 ### 🏗️ System Architecture & Design
 - **[Architecture Overview](./ARCHITECTURE.md)** - Complete system design, data flow, and component interactions
-- **[API Reference](./API.md)** - Comprehensive MCP and REST API documentation with examples
+- **[API Reference](./API.md)** - Comprehensive MCP and REST API documentation with examples ⭐ **Enhanced v0.10.0**
 - **[DSL Reference](./dsl.md)** - YAML schema language specification with validation and best practices
 
 ### 🔌 Integration & Development  
 - **[Connectors Guide](./connectors.md)** - Data source integration patterns and connector development
 - **[GraphRAG Implementation](./graphrag.md)** - Advanced graph-enhanced RAG with LangGraph agents
 - **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment for Docker, Kubernetes, and enterprise environments
+
+### 🏢 Enterprise Features ⭐ **New in v0.10.0**
+- **[Identity Resolution Patterns](./identity-resolution.md)** - Enterprise entity deduplication with configurable confidence thresholds
+- **[Security Patterns](./security-patterns.md)** - Production credential management with AWS Secrets Manager, HashiCorp Vault, and RBAC
 
 ### 📋 Operations & Maintenance
 - **[CHANGELOG](../CHANGELOG.md)** - Release history and version information following semantic versioning

@@ -1,18 +1,19 @@
 // Update the main index.ts file to integrate all components
 import express, { Request, Response } from 'express';
 import { server, registeredSchemas } from './capabilities';
-import { initDriver, setupKB, mergeNodesAndRels, executeCypher, getDriver } from './ingest';
+import { initDriver, setupKB, mergeNodesAndRels, executeCypher, getDriver, semanticSearch } from './ingest';
 import { parseSchema, applyMapping } from './dsl';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { randomUUID } from 'crypto';
 import { syncStatusHandler, runsHandler, getSystemStatus } from './status/index';
+import { config } from './config';
+import { EmbeddingProviderFactory } from './embeddings/index';
 import axios from 'axios';
 
 // Initialize Neo4j driver
 initDriver();
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
@@ -182,41 +183,52 @@ app.post('/api/ingest', async (req: Request, res: Response) => {
 
 app.post('/api/semantic-search', async (req: Request, res: Response) => {
   try {
-    const { kb_id, text, top_k = 5 } = req.body;
+    const { kb_id, text, top_k = 5, filters } = req.body;
     
-    // Mock semantic search results for testing
-    const mockResults = [
-      {
-        node_id: 'doc-1',
-        score: 0.87,
-        content: {
-          title: 'Getting Started with Knowledge Graphs',
-          type: 'document',
-          author: 'John Doe',
-          kb_id: kb_id,
-          content: 'Knowledge graphs are powerful data structures that represent information as interconnected entities and relationships...'
-        }
-      },
-      {
-        node_id: 'doc-2', 
-        score: 0.78,
-        content: {
-          title: 'Graph RAG Tutorial',
-          type: 'document', 
-          author: 'Jane Smith',
-          kb_id: kb_id,
-          content: 'Retrieval-Augmented Generation with knowledge graphs combines the power of semantic search with structured data...'
-        }
-      }
-    ];
+    if (!kb_id || !text) {
+      res.status(400).json({ 
+        error: 'Missing required parameters: kb_id and text are required' 
+      });
+      return;
+    }
     
+    // Get the schema to find the embedding provider
+    const schema = registeredSchemas.get(kb_id);
+    if (!schema) {
+      res.status(404).json({ 
+        error: `Schema for knowledge base '${kb_id}' not found. Please register the schema first.` 
+      });
+      return;
+    }
+
+    // Generate embeddings for the search text
+    const embeddingProvider = EmbeddingProviderFactory.create(schema.embedding.provider);
+    const queryVector = await embeddingProvider.embed(text) as number[];
+
+    // Perform semantic search using vector embeddings with filters
+    const results = await semanticSearch(kb_id, queryVector, top_k, filters);
+
     res.json({
-      found: mockResults.length,
-      results: mockResults.slice(0, top_k),
-      query: text
+      found: results.length,
+      results: results.map(result => ({
+        node_id: result.node.id || result.node.kb_id + '_' + (result.node.source_id || 'unknown'),
+        score: result.score,
+        content: result.node,
+        filters_applied: filters ? {
+          labels: filters.labels,
+          properties: filters.props ? Object.keys(filters.props) : undefined
+        } : undefined
+      })),
+      query: text,
+      kb_id,
+      embedding_provider: schema.embedding.provider
     });
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    console.error('Semantic search error:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -252,6 +264,72 @@ app.get('/api/status', async (req: Request, res: Response) => {
 
 app.get('/api/sync-status/:kb_id', syncStatusHandler);
 app.get('/api/runs/:kb_id?', runsHandler);
+
+// Enhanced operational monitoring endpoint
+app.get('/api/health', async (req: Request, res: Response) => {
+  try {
+    const systemStatus = await getSystemStatus();
+    
+    // Generate alerts based on system status
+    const alerts: Array<{severity: 'info' | 'warning' | 'error', message: string, timestamp: number}> = [];
+    
+    if (!systemStatus.neo4j_connected) {
+      alerts.push({
+        severity: 'error',
+        message: 'Neo4j database connection failed',
+        timestamp: Date.now()
+      });
+    }
+    
+    if (systemStatus.health_score < 80) {
+      alerts.push({
+        severity: 'warning', 
+        message: `System health score is low: ${systemStatus.health_score}/100`,
+        timestamp: Date.now()
+      });
+    }
+    
+    if (systemStatus.active_runs > 10) {
+      alerts.push({
+        severity: 'warning',
+        message: `High number of active runs: ${systemStatus.active_runs}`,
+        timestamp: Date.now()
+      });
+    }
+    
+    // Check for stale knowledge bases
+    const staleKBs = systemStatus.knowledge_bases.filter(kb => kb.health_status === 'stale' || kb.health_status === 'error');
+    if (staleKBs.length > 0) {
+      alerts.push({
+        severity: 'warning',
+        message: `${staleKBs.length} knowledge base(s) need attention: ${staleKBs.map(kb => kb.kb_id).join(', ')}`,
+        timestamp: Date.now()
+      });
+    }
+    
+    res.json({
+      status: systemStatus,
+      alerts,
+      summary: {
+        healthy_kbs: systemStatus.knowledge_bases.filter(kb => kb.health_status === 'healthy').length,
+        total_kbs: systemStatus.knowledge_bases.length,
+        overall_health: systemStatus.health_score >= 90 ? 'excellent' : 
+                       systemStatus.health_score >= 70 ? 'good' : 
+                       systemStatus.health_score >= 50 ? 'fair' : 'poor'
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      alerts: [{
+        severity: 'error',
+        message: 'Failed to retrieve system health status',
+        timestamp: Date.now()
+      }]
+    });
+  }
+});
 
 // Set up the MCP endpoint
 app.post('/mcp', async (req: Request, res: Response) => {
@@ -304,6 +382,9 @@ app.get('/api/query/:kb_id', async (req: Request, res: Response) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Knowledge Graph Orchestrator MCP server is running on port ${port}`);
+app.listen(config.PORT, () => {
+  console.log(`🚀 Knowledge Graph Brain Orchestrator running on http://localhost:${config.PORT}`);
+  if (config.DEMO_MODE) {
+    console.log('🎭 Running in DEMO MODE - using mock data where credentials are missing');
+  }
 });

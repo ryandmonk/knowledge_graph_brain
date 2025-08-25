@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Startup script for Knowledge Graph Brain services
-# This script starts all required services in the correct order
+# Knowledge Graph Brain - Centralized Service Startup
+# Uses centralized .env configuration for all services
 
 set -e
 
@@ -12,42 +12,136 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 Knowledge Graph Brain - Service Startup${NC}"
-echo "=============================================="
+echo -e "${BLUE}🚀 Starting Knowledge Graph Brain Services...${NC}"
+
+# Check if central .env exists
+if [ ! -f .env ]; then
+    echo -e "${YELLOW}📋 No .env file found. Creating from template...${NC}"
+    cp .env.example .env
+    echo -e "${GREEN}✅ Created .env file. Please review and customize if needed.${NC}"
+fi
+
+# Load environment to show current configuration
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
+fi
+
+echo ""
+echo -e "${BLUE}🔧 Current Configuration:${NC}"
+echo "   DEMO_MODE: ${DEMO_MODE:-true}"
+echo "   EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-ollama}"
+echo "   NEO4J_URI: ${NEO4J_URI:-bolt://localhost:7687}"
+echo ""
+
+if [ "${DEMO_MODE:-true}" = "true" ]; then
+    echo -e "${YELLOW}🎭 DEMO MODE is ACTIVE - all connectors will use mock data${NC}"
+    echo "   To disable: Set DEMO_MODE=false in .env file"
+else
+    echo -e "${GREEN}🔐 PRODUCTION MODE is ACTIVE - connectors will use real API credentials${NC}"
+    echo "   Make sure all required API tokens are set in .env file"
+fi
+
+echo ""
 
 # Check prerequisites
 check_prerequisites() {
     echo -e "${BLUE}🔍 Checking prerequisites...${NC}"
     
     # Check if Neo4j is running
-    if curl -s -u neo4j:password http://localhost:7474/db/data/ > /dev/null 2>&1; then
+    if curl -s -u ${NEO4J_USER:-neo4j}:${NEO4J_PASSWORD:-password} http://localhost:7474/db/data/ > /dev/null 2>&1; then
         echo -e "${GREEN}✅ Neo4j is running${NC}"
     else
-        echo -e "${YELLOW}⚠️ Neo4j not detected. Starting with Docker...${NC}"
-        cd infra
-        docker-compose up -d neo4j
-        cd ..
-        
-        # Wait for Neo4j to be ready
-        echo "Waiting for Neo4j to start..."
-        sleep 10
-        
-        # Test connection
-        timeout=30
-        while [ $timeout -gt 0 ]; do
-            if curl -s -u neo4j:password http://localhost:7474/db/data/ > /dev/null 2>&1; then
-                echo -e "${GREEN}✅ Neo4j is now running${NC}"
-                break
-            fi
-            sleep 2
-            timeout=$((timeout-2))
-        done
-        
-        if [ $timeout -le 0 ]; then
-            echo -e "${RED}❌ Neo4j failed to start${NC}"
+        echo -e "${YELLOW}⚠️ Neo4j not detected. Please start Neo4j Desktop or Docker.${NC}"
+        echo "   For Docker: cd infra && docker-compose up -d neo4j"
+        echo "   For Neo4j Desktop: Start your database"
+        exit 1
+    fi
+    
+    # Check if Ollama is running (if using ollama)
+    if [ "${EMBEDDING_PROVIDER:-ollama}" = "ollama" ]; then
+        if curl -s ${OLLAMA_BASE_URL:-http://localhost:11434}/api/tags > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ Ollama is running${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Ollama not detected. Please start Ollama service.${NC}"
+            echo "   Visit: https://ollama.ai/download"
             exit 1
         fi
     fi
+}
+
+check_prerequisites
+
+echo ""
+echo -e "${BLUE}🏗️  Building and starting services...${NC}"
+
+# Function to start a service in background
+start_service() {
+    local service_name=$1
+    local service_path=$2
+    local port=$3
+    
+    echo -e "${BLUE}📡 Starting ${service_name} (Port: ${port})...${NC}"
+    cd ${service_path}
+    
+    # Install dependencies if needed
+    if [ ! -d "node_modules" ]; then
+        echo "   Installing dependencies..."
+        npm install > /dev/null 2>&1
+    fi
+    
+    # Build if TypeScript project
+    if [ -f "tsconfig.json" ]; then
+        echo "   Building TypeScript..."
+        npm run build > /dev/null 2>&1
+    fi
+    
+    # Start the service in background
+    npm start > "../logs/${service_name}.log" 2>&1 &
+    echo $! > "../logs/${service_name}.pid"
+    
+    cd ..
+    echo -e "${GREEN}✅ ${service_name} starting...${NC}"
+}
+
+# Create logs directory
+mkdir -p logs
+
+# Start orchestrator
+start_service "Orchestrator" "orchestrator" "${ORCHESTRATOR_PORT:-3000}"
+
+# Start connectors
+start_service "GitHub-Connector" "connectors/github" "${GITHUB_CONNECTOR_PORT:-3002}"
+start_service "Slack-Connector" "connectors/slack" "${SLACK_CONNECTOR_PORT:-3003}"
+start_service "Confluence-Connector" "connectors/confluence" "${CONFLUENCE_CONNECTOR_PORT:-3004}"
+start_service "Retail-Mock-Connector" "connectors/retail-mock" "${RETAIL_CONNECTOR_PORT:-8081}"
+
+echo ""
+echo -e "${GREEN}✅ All services are starting up...${NC}"
+echo ""
+echo -e "${BLUE}🔍 Service URLs:${NC}"
+echo "   Orchestrator:          http://localhost:${ORCHESTRATOR_PORT:-3000}"
+echo "   GitHub Connector:      http://localhost:${GITHUB_CONNECTOR_PORT:-3002}" 
+echo "   Slack Connector:       http://localhost:${SLACK_CONNECTOR_PORT:-3003}"
+echo "   Confluence Connector:  http://localhost:${CONFLUENCE_CONNECTOR_PORT:-3004}"
+echo "   Retail Mock Connector: http://localhost:${RETAIL_CONNECTOR_PORT:-8081}"
+echo ""
+echo -e "${YELLOW}⏳ Services are starting... Check logs/ directory for detailed output${NC}"
+echo -e "${BLUE}🩺 Run 'curl http://localhost:${ORCHESTRATOR_PORT:-3000}/health' to check orchestrator status${NC}"
+echo ""
+echo -e "${YELLOW}📋 To stop all services: ./stop-services.sh${NC}"
+echo -e "${YELLOW}📋 To view logs: tail -f logs/*.log${NC}"
+
+# Wait a moment for services to start
+sleep 3
+
+echo ""
+echo -e "${BLUE}🎉 Knowledge Graph Brain is ready!${NC}"
+echo ""
+if [ "${DEMO_MODE:-true}" = "true" ]; then
+    echo -e "${YELLOW}🎭 Running in DEMO MODE with safe mock data${NC}"
+else
+    echo -e "${GREEN}🔐 Running in PRODUCTION MODE with real API connections${NC}"
+fi
     
     # Check if Ollama is running
     if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then

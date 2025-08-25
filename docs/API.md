@@ -200,6 +200,59 @@ GET /health
 }
 ```
 
+#### **Enhanced System Health API** (v0.10.0+)
+```http
+GET /api/health
+```
+
+**Advanced health monitoring with alert generation and performance scoring.**
+
+**Response:**
+```json
+{
+  "health_score": 100,
+  "status": "healthy",
+  "alerts": [],
+  "last_updated": "2025-12-XX T10:30:00.000Z",
+  "summary": "All systems operational. No active alerts.",
+  "details": {
+    "neo4j_connected": true,
+    "embedding_provider": "ollama:mxbai-embed-large",
+    "memory_usage_mb": 245.7,
+    "uptime_hours": 12.5,
+    "active_runs": 0,
+    "total_errors": 0
+  },
+  "knowledge_bases": [
+    {
+      "kb_id": "confluence-demo",
+      "health_status": "healthy",
+      "total_nodes": 6,
+      "total_relationships": 4,
+      "data_freshness_hours": 2.1,
+      "node_types": {
+        "Document": 2,
+        "Person": 2,
+        "Topic": 2
+      }
+    }
+  ]
+}
+```
+
+**Health Score Algorithm:**
+- **100**: All systems optimal
+- **75-99**: Minor issues or warnings  
+- **50-74**: Moderate performance degradation
+- **25-49**: Significant issues requiring attention
+- **0-24**: Critical system failures
+
+**Alert Types:**
+- `neo4j_connection_failed`: Database connectivity issues
+- `performance_degraded`: Slow response times detected
+- `stale_data_warning`: Knowledge bases not updated recently
+- `memory_pressure`: High memory usage detected
+
 #### System Status
 ```http
 GET /api/status
@@ -320,7 +373,7 @@ Content-Type: application/json
 }
 ```
 
-**Semantic Search**
+**Enhanced Semantic Search** (v0.10.0+)
 ```http
 POST /api/semantic-search
 Content-Type: application/json
@@ -328,7 +381,39 @@ Content-Type: application/json
 {
   "kb_id": "test-kb",
   "text": "search query",
-  "top_k": 5
+  "top_k": 5,
+  "labels": ["Document", "Person"],
+  "properties": {
+    "category": "electronics",
+    "status": "active"
+  }
+}
+```
+
+**Enhanced Features:**
+- **Real Vector Integration**: Uses actual EmbeddingProviderFactory with Ollama/OpenAI embeddings
+- **Label Filtering**: Filter results by specific node labels/types  
+- **Property Filtering**: Filter by node properties for precise results
+- **Multi-Provider Support**: Automatic provider detection (1024-dim Ollama, 1536-dim OpenAI)
+
+**Response:**
+```json
+{
+  "found": 3,
+  "results": [
+    {
+      "node_id": "doc-123",
+      "labels": ["Document"],
+      "score": 0.87,
+      "content": "Relevant document content...",
+      "properties": {
+        "title": "Product Guide",
+        "category": "electronics"
+      }
+    }
+  ],
+  "embedding_provider": "ollama:mxbai-embed-large",
+  "vector_dimensions": 1024
 }
 ```
 

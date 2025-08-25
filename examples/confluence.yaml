@@ -113,56 +113,29 @@ mappings:
       connector_url: "http://localhost:3004/pull"
       document_type: "confluence_content"
       extract:
-        # Spaces
-        - node: Space
-          filter: "$.type == 'space'"
-          assign:
-            id: "$.id"
-            key: "$.key"
-            name: "$.name"
-            description: "$.description"
-            type: "$.type"
-            created_at: "$.created_at"
-            updated_at: "$.updated_at"
-        # Pages
-        - node: Page
-          filter: "$.content_type == 'page'"
-          assign:
-            id: "$.id"
-            title: "$.title"
-            content: "$.content"
-            content_type: "$.content_type"
-            created_at: "$.created_at"
-            updated_at: "$.updated_at"
-            version: "$.version"
-            status: "$.status"
-            url: "$.url"
-        # Blog Posts
-        - node: BlogPost
-          filter: "$.content_type == 'blogpost'"
-          assign:
-            id: "$.id"
-            title: "$.title"
-            content: "$.content"
-            excerpt: "$.excerpt"
-            created_at: "$.created_at"
-            updated_at: "$.updated_at"
-            url: "$.url"
-        # Users
-        - node: User
-          source: "$.author"
-          assign:
-            account_id: "$.account_id"
-            display_name: "$.display_name"
-            email: "$.email"
+        node: "Page"
+        assign:
+          id: "$.id"
+          title: "$.title"
+          content: "$.content"
+          content_type: "$.content_type"
+          created_at: "$.created_at"
+          updated_at: "$.updated_at"
+          version: "$.version"
+          status: "$.status"
+          url: "$.url"
       edges:
         - type: BELONGS_TO_SPACE
-          from: { node: [Page, BlogPost], key: "$.id" }
+          from: 
+            node: "Page"
+            key: "$.id"
           to:
             node: Space
             key: "$.space_id"
         - type: CREATED_BY
-          from: { node: [Page, BlogPost], key: "$.id" }
+          from: 
+            node: "Page" 
+            key: "$.id"
           to:
             node: User
             key: "$.author.account_id"
@@ -171,13 +144,17 @@ mappings:
               display_name: "$.author.display_name"
               email: "$.author.email"
         - type: HAS_PARENT
-          from: { node: Page, key: "$.id" }
+          from: 
+            node: "Page"
+            key: "$.id"
           to:
             node: Page
             key: "$.parent_id"
             condition: "$.parent_id != null"
         - type: HAS_LABEL
-          from: { node: [Page, BlogPost], key: "$.id" }
+          from: 
+            node: "Page"
+            key: "$.id"
           to:
             node: Label
             key: "$.labels[*].id"

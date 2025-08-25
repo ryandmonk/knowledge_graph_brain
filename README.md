@@ -20,7 +20,8 @@ An MCP-based orchestrator that ingests data from multiple sources, maps them thr
 - **Dynamic Schema Management**: Register unlimited data sources without code changes using YAML-based schemas with connector URLs.  
 - **Hybrid Intelligence**: Combine semantic vector search and structured graph queries for richer answers.  
 - **Privacy-First AI**: Choose fully local (Ollama) or cloud (OpenAI) embeddings; your data stays under your control.  
-- **Development-Ready**: Dockerized, TypeScript-based, with pluggable connectors, testing framework, and health monitoring.  
+- **Enterprise Operations**: Professional health monitoring, alert generation, multi-provider embedding testing, and comprehensive citations.
+- **Production-Ready**: Dockerized, TypeScript-based, with identity resolution, security patterns, and operational intelligence.  
 - **Extensible**: Pluggable schemas, embeddings, and connectors for any domain or workload.  
 
 ---
@@ -118,11 +119,19 @@ npm install && npm start
 ### 4. Verify All Services Are Running
 ```bash
 # Check service health
-curl http://localhost:3000/health    # Orchestrator
+curl http://localhost:3000/health    # Orchestrator basic health
+curl http://localhost:3000/api/health # Enhanced health monitoring with scoring
 curl http://localhost:3001/health    # Confluence connector
 curl http://localhost:8081/health    # Retail connector (for full demo)
 curl http://localhost:11434/api/tags # Ollama models
 ```
+
+**🎯 Enhanced Health Monitoring (v0.10.0+)**  
+The `/api/health` endpoint provides comprehensive system intelligence:
+- **Health Scoring**: 0-100 system performance score
+- **Alert Generation**: Automated issue detection and reporting  
+- **Operational Metrics**: Memory usage, uptime, active runs tracking
+- **Knowledge Base Health**: Per-KB status with data freshness analysis
 
 ### 5. Register Schemas (Required First Step)
 **The system now supports unlimited data sources through dynamic schema registration!**
@@ -278,12 +287,20 @@ Supports **local Ollama** (`mxbai-embed-large`, `qwen3:8b`, etc.) or **cloud Ope
 
 ## 📚 Documentation
 
+**Core System:**
 - [Architecture Guide](./docs/ARCHITECTURE.md)  
-- [API Documentation](./docs/API.md)  
+- [API Documentation](./docs/API.md) - **Enhanced with v0.10.0 features**
 - [Deployment Guide](./docs/DEPLOYMENT.md)  
 - [DSL Reference](./docs/dsl.md)  
 - [Connectors Guide](./docs/connectors.md)  
 - [GraphRAG Guide](./docs/graphrag.md)  
+
+**Enterprise Features:** ⭐ **New in v0.10.0**
+- [Identity Resolution Patterns](./docs/identity-resolution.md) - Entity deduplication strategies
+- [Security Patterns](./docs/security-patterns.md) - Enterprise credential management
+
+**Operations & Testing:**
+- [CLI Tools Guide](./docs/cli.md)
 - [Testing Guide](./TESTING.md)  
 - [Troubleshooting Guide](./TROUBLESHOOTING.md)  
 - [Sample Questions](./langgraph/graph_rag_agent/sample_questions.md)  

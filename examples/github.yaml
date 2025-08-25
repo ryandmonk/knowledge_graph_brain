@@ -4,7 +4,7 @@ description: GitHub repositories, issues, pull requests, commits, and releases
 embedding:
   provider: "ollama:mxbai-embed-large"
   chunking:
-    strategy: "by_paragraphs"
+    strategy: "paragraph"
     max_tokens: 1000
 
 schema:
