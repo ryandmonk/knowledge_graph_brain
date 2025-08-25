@@ -9,7 +9,7 @@ schema:
   nodes:
     - label: Product
       key: sku
-      props: [sku, name, description, brand, category, price, currency]
+      props: [sku, name, description, category, price]
     - label: Order
       key: order_id
       props: [order_id, order_date, total, currency]
@@ -26,6 +26,30 @@ schema:
       to: Customer
 mappings:
   sources:
+    - source_id: "products"
+      connector_url: "http://localhost:8081/data/products"
+      document_type: "product"
+      extract:
+        node: Product
+        assign:
+          sku: "$.sku"
+          name: "$.name"
+          description: "$.description"
+          category: "$.category"
+          price: "$.price"
+      edges: []
+    
+    - source_id: "customers"
+      connector_url: "http://localhost:8081/data/customers"
+      document_type: "customer"
+      extract:
+        node: Customer
+        assign:
+          email: "$.email"
+          name: "$.name"
+          segment: "$.segment"
+      edges: []
+    
     - source_id: "shopify"
       document_type: "order"
       extract:

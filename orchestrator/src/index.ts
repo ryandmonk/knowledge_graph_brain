@@ -1,7 +1,7 @@
 // Update the main index.ts file to integrate all components
 import express, { Request, Response } from 'express';
-import { server } from './capabilities';
-import { initDriver, setupKB, mergeNodesAndRels, getDriver } from './ingest';
+import { server, registeredSchemas } from './capabilities';
+import { initDriver, setupKB, mergeNodesAndRels, executeCypher, getDriver } from './ingest';
 import { parseSchema, applyMapping } from './dsl';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { randomUUID } from 'crypto';
@@ -33,6 +33,9 @@ app.post('/api/register-schema', async (req: Request, res: Response) => {
     // Parse and validate the schema
     const schema = parseSchema(schema_yaml);
     
+    // Store the schema in memory for the MCP system
+    registeredSchemas.set(kb_id, schema);
+    
     // Setup the knowledge base in Neo4j
     await setupKB(kb_id, schema);
     
@@ -59,159 +62,92 @@ app.post('/api/ingest', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing kb_id or source_id' });
     }
     
-    // For now, we'll assume the schema is already registered and retrieve it
-    // In a full implementation, we'd store and retrieve the schema from Neo4j
-    // For the demo, let's use the retail schema directly
-    const retailSchema = parseSchema(`# Retail Schema Example
-kb_id: retail-demo
-embedding:
-  provider: "ollama:mxbai-embed-large"
-  chunking:
-    strategy: "by_fields"
-    fields: ["description", "attributes"]
-schema:
-  nodes:
-    - label: Product
-      key: sku
-      props: [sku, name, description, brand, category, price, currency]
-    - label: Order
-      key: order_id
-      props: [order_id, order_date, total, currency]
-    - label: Customer
-      key: email
-      props: [email, name, segment]
-  relationships:
-    - type: CONTAINS
-      from: Order
-      to: Product
-      props: [qty, unit_price]
-    - type: PURCHASED_BY
-      from: Order
-      to: Customer
-mappings:
-  sources:
-    - source_id: "shopify"
-      document_type: "order"
-      extract:
-        node: Order
-        assign:
-          order_id: "$.id"
-          order_date: "$.created_at"
-          total: "$.total_price"
-          currency: "$.currency"
-      edges:
-        - type: CONTAINS
-          from: { node: Order, key: "$.id" }
-          to: 
-            node: Product
-            key: "$.line_items[*].sku"
-            props:
-              qty: "$.line_items[*].quantity"
-              unit_price: "$.line_items[*].price"
-        - type: PURCHASED_BY
-          from: { node: Order, key: "$.id" }
-          to: { node: Customer, key: "$.customer.email" }`);
-    
-    // Find the mapping for this source
-    const mapping = retailSchema.mappings.sources.find(s => s.source_id === source_id);
+    // Retrieve the registered schema for this KB
+    const schema = registeredSchemas.get(kb_id);
+    if (!schema) {
+      return res.status(400).json({ 
+        error: `No schema registered for kb_id: ${kb_id}. Please register a schema first using /api/register-schema`,
+        available_kbs: Array.from(registeredSchemas.keys())
+      });
+    }    // Find the mapping for this source
+    const mapping = schema.mappings.sources.find(s => s.source_id === source_id);
     if (!mapping) {
-      return res.status(400).json({ error: `No mapping found for source_id: ${source_id}` });
+      return res.status(400).json({ 
+        error: `No mapping found for source_id: ${source_id}`,
+        available_sources: schema.mappings.sources.map(s => s.source_id)
+      });
     }
     
-    // Fetch data from the connector (assuming it's running on localhost:8081)
-    const connectorUrl = `http://localhost:8081/data/products`; // For now, just products
-    const response = await axios.get(connectorUrl);
-    const documents = response.data.data;
+    // Get connector URL from mapping (with fallback for backward compatibility)
+    let connectorUrl = (mapping as any).connector_url;
+    if (!connectorUrl) {
+      // Fallback logic for schemas without explicit connector_url
+      if (source_id === 'products' || source_id === 'customers') {
+        connectorUrl = `http://localhost:8081/data/${source_id}`;
+      } else if (source_id === 'confluence') {
+        connectorUrl = 'http://localhost:3001/pull';
+      } else {
+        return res.status(400).json({ 
+          error: `No connector_url found for source_id: ${source_id}. Please update schema to include connector_url in mapping.`,
+          mapping_format: 'sources:\n  - source_id: "your-source"\n    connector_url: "http://localhost:port/endpoint"'
+        });
+      }
+    }
+    
+    // Fetch data from the connector
+    let response;
+    try {
+      response = await axios.get(connectorUrl);
+    } catch (error) {
+      return res.status(503).json({ 
+        error: `Failed to connect to connector at ${connectorUrl}. Ensure connector is running.`,
+        connector_url: connectorUrl,
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    
+    // Handle different response formats
+    let documents;
+    if (source_id === 'confluence') {
+      documents = response.data; // Confluence returns array directly
+    } else {
+      documents = response.data.data || response.data; // Retail returns {data: [...]}
+    }
     
     const run_id = randomUUID();
     let totalNodes = 0;
     let totalRels = 0;
     
-    // Process each document
+    console.log(`🔍 Processing ${documents.length} documents from ${source_id}`);
+    
+    // Process each document using the schema mapping
     for (const doc of documents) {
-      // Transform the product data to match our order schema structure
-      const mockOrder = {
-        id: `order-${doc.id}`,
-        created_at: doc.created_at,
-        total_price: doc.price,
-        currency: 'USD',
-        line_items: [{
-          sku: doc.sku,
-          quantity: 1,
-          price: doc.price
-        }],
-        customer: {
-          email: `customer-${doc.id}@example.com`
-        }
-      };
+      console.log(`📄 Processing document:`, doc);
       
-      // Apply the mapping to extract nodes and relationships
-      const { nodes, relationships } = applyMapping(mockOrder, mapping, retailSchema);
+      // Apply the mapping to extract nodes and relationships directly from the document
+      const { nodes, relationships } = applyMapping(doc, mapping, schema);
       
-      // Create additional nodes for Products and Customers that will be referenced in relationships
-      const productNode = {
-        label: 'Product',
-        properties: {
-          sku: doc.sku,
-          name: doc.name,
-          description: doc.description,
-          brand: doc.brand || 'Unknown',
-          category: doc.category,
-          price: doc.price,
-          currency: 'USD'
-        }
-      };
+      console.log(`✅ Extracted ${nodes.length} nodes and ${relationships.length} relationships`);
       
-      const customerNode = {
-        label: 'Customer',
-        properties: {
-          email: `customer-${doc.id}@example.com`,
-          name: `Customer ${doc.id}`,
-          segment: 'retail'
-        }
-      };
+      // Convert to the format expected by mergeNodesAndRels (nodes should already have correct key)
+      const formattedNodes = nodes.map(node => ({
+        label: node.label,
+        key: node.key,
+        properties: node.properties
+      }));
       
-      // Add the additional nodes
-      nodes.push(productNode);
-      nodes.push(customerNode);
-      
-      // Convert to the format expected by mergeNodesAndRels
-      const formattedNodes = nodes.map(node => {
-        let key;
-        if (node.label === 'Order') {
-          key = node.properties.order_id;
-        } else if (node.label === 'Product') {
-          key = node.properties.sku;
-        } else if (node.label === 'Customer') {
-          key = node.properties.email;
-        } else {
-          key = node.properties.id || Object.values(node.properties)[0];
-        }
-        
-        console.log(`Formatting node: ${node.label}, key: ${key}, properties:`, node.properties);
-        
-        return {
-          label: node.label,
-          key: key,
-          properties: node.properties
-        };
-      });
-      
-      const formattedRels = relationships.map(rel => {
-        console.log(`Formatting relationship: ${rel.type}, from: ${rel.from.label}(${rel.from.key}) -> to: ${rel.to.label}(${rel.to.key})`);
-        return {
-          type: rel.type,
-          from: {
-            label: rel.from.label,
-            key: rel.from.key
-          },
-          to: {
-            label: rel.to.label,
-            key: rel.to.key
-          },
-          properties: rel.properties
-        };
-      });
+      const formattedRels = relationships.map(rel => ({
+        type: rel.type,
+        from: {
+          label: rel.from.label,
+          key: rel.from.key
+        },
+        to: {
+          label: rel.to.label,
+          key: rel.to.key
+        },
+        properties: rel.properties
+      }));
       
       // Merge into Neo4j
       const { createdNodes, createdRels } = await mergeNodesAndRels(
@@ -288,28 +224,18 @@ app.post('/api/search-graph', async (req: Request, res: Response) => {
   try {
     const { kb_id, cypher } = req.body;
     
-    // Mock graph query results
-    const mockRows = [
-      {
-        title: 'Getting Started with Knowledge Graphs',
-        author: 'John Doe',
-        email: 'john@example.com',
-        created: '2025-01-01T00:00:00Z'
-      },
-      {
-        title: 'Graph RAG Tutorial',
-        author: 'Jane Smith', 
-        email: 'jane@example.com',
-        created: '2025-01-02T00:00:00Z'
-      }
-    ];
+    // Execute the real Cypher query against Neo4j
+    console.log(`Executing Cypher query: ${cypher}`);
+    const results = await executeCypher(cypher, { kb_id });
     
     res.json({
-      rows: mockRows,
+      rows: results,
       query: cypher,
-      kb_id: kb_id
+      kb_id: kb_id,
+      count: results.length
     });
   } catch (error) {
+    console.error('Graph search error:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -356,7 +282,7 @@ app.get('/api/query/:kb_id', async (req: Request, res: Response) => {
     const { kb_id } = req.params;
     const { cypher = 'MATCH (n) WHERE n.kb_id = $kb_id RETURN n LIMIT 10' } = req.query;
     
-    const session = getDriver().session({ database: 'graphbrain' });
+    const session = getDriver().session({ database: 'neo4j' });
     
     try {
       const result = await session.run(cypher as string, { kb_id });

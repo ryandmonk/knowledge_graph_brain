@@ -98,6 +98,28 @@ kb_id: "retail-analytics"
 metadata:
   name: "Retail Analytics Knowledge Base"
   description: "Customer behavior and product analytics"
+```
+
+### Dynamic Connector Configuration ⭐ **New in v1.2.0**
+
+Each data source mapping **must include** a `connector_url` for dynamic connector resolution:
+
+```yaml
+mappings:
+  sources:
+    - source_id: "my-data-source"
+      connector_url: "http://localhost:8080/api/data"  # ⚠️ REQUIRED
+      document_type: "document"
+      # ... rest of mapping
+```
+
+**Benefits**:
+- ✅ **No Code Changes**: Add unlimited data sources without touching orchestrator code
+- ✅ **Environment Flexibility**: Different URLs for dev/staging/production
+- ✅ **Dynamic Resolution**: Connector URLs resolved at runtime from schema
+- ✅ **Zero Hardcoding**: Complete elimination of hardcoded connector logic
+
+**Migration from v1.1.x**: Add `connector_url` to existing schema mappings.
   version: "1.2.0"
   owner: "data-team@company.com"
   tags: ["retail", "analytics", "customer-data"]

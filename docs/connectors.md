@@ -1,10 +1,29 @@
 # Knowledge Graph Brain - Data Connectors
 
-Professional data connectors for integrating diverse data sources into knowledge graphs with standardized MCP interfaces and flexible transformation patterns.
+Professional data connectors for integrating diverse data sources into knowledge graphs with **dynamic schema management** and standardized MCP interfaces.
 
 ## Overview
 
-Knowledge Graph Brain connectors provide standardized interfaces for extracting data from various sources and transforming it into knowledge graph structures. Each connector implements the MCP (Model Context Protocol) standard for consistent integration patterns.
+Knowledge Graph Brain connectors provide standardized interfaces for extracting data from various sources and transforming it into knowledge graph structures. **As of v1.2.0, all connectors support dynamic URL resolution** - enabling unlimited data source integration without code changes.
+
+### Dynamic Connector Architecture ⭐ **New in v1.2.0**
+
+The system now uses **completely dynamic connector resolution** based on schema mappings:
+
+```yaml
+# Schema defines connector URL - no hardcoded logic
+mappings:
+  sources:
+    - source_id: "my-source"  
+      connector_url: "http://localhost:8080/api"  # Resolved dynamically
+      document_type: "document"
+```
+
+**Benefits**:
+- ✅ **Zero Code Changes**: Add unlimited data sources without touching orchestrator  
+- ✅ **Environment Flexibility**: Different URLs for dev/staging/production
+- ✅ **Runtime Resolution**: Connector URLs determined from registered schemas
+- ✅ **Infinite Scalability**: No hardcoded connector limitations
 
 ## Connector Architecture
 

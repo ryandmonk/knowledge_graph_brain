@@ -197,6 +197,145 @@ kgb status --runs          # Recent ingestion runs
 
 ---
 
+## Dynamic Schema Architecture (v1.2.0+)
+
+### Overview
+
+Knowledge Graph Brain implements a **completely dynamic schema management system** that enables unlimited data source integration without code changes. This architecture represents a major milestone in the system's evolution from a demo platform to a production-ready, infinitely scalable knowledge graph solution.
+
+### Key Components
+
+#### 1. Schema Registry (`registeredSchemas` Map)
+
+The central schema storage system that maintains all registered knowledge base schemas in memory:
+
+```typescript
+// In capabilities/index.ts
+export const registeredSchemas: Map<string, Schema> = new Map();
+
+// Schema registration stores parsed schemas
+registeredSchemas.set(kb_id, parsedSchema);
+```
+
+**Benefits**:
+- ✅ **Zero Hardcoding**: No schemas embedded in source code
+- ✅ **Runtime Registration**: Schemas can be added/updated without deployments  
+- ✅ **Multi-tenant**: Each knowledge base maintains isolated schema
+- ✅ **Memory Efficient**: Fast lookup with Map-based storage
+
+#### 2. Dynamic Connector Resolution
+
+Connector URLs are resolved dynamically from schema mappings instead of hardcoded logic:
+
+```yaml
+# Schema defines connector URLs
+mappings:
+  sources:
+    - source_id: "products"
+      connector_url: "http://localhost:8081/data/products"  # Dynamic resolution
+      document_type: "product"
+      # ... rest of mapping
+```
+
+**Before (v1.1.x - Hardcoded)**:
+```typescript
+// ❌ Hardcoded connector logic (removed in v1.2.0)
+if (source_id === 'products') {
+  connectorUrl = 'http://localhost:8081/data/products';
+} else if (source_id === 'confluence') {
+  connectorUrl = 'http://localhost:3001/pull';
+}
+```
+
+**After (v1.2.0+ - Dynamic)**:
+```typescript
+// ✅ Dynamic connector resolution from schema
+const mapping = schema.mappings.sources.find(s => s.source_id === source_id);
+const connectorUrl = mapping.connector_url;
+```
+
+#### 3. Schema-Agnostic Ingestion Pipeline
+
+The data ingestion process is completely driven by registered schemas:
+
+```typescript
+// Dynamic schema lookup
+const schema = registeredSchemas.get(kb_id);
+if (!schema) {
+  throw new Error(`No schema registered for kb_id: ${kb_id}`);
+}
+
+// Dynamic connector resolution
+const mapping = schema.mappings.sources.find(s => s.source_id === source_id);
+const connectorUrl = mapping.connector_url;
+
+// Schema-driven data processing
+const extractedData = applyMapping(document, mapping);
+```
+
+### Scalability Benefits
+
+#### Unlimited Data Sources
+
+Adding a new data source requires **zero code changes**:
+
+1. **Create Connector**: Implement data source API
+2. **Define Schema**: Create YAML with `connector_url` mapping  
+3. **Register Schema**: POST to `/api/register-schema`
+4. **Ingest Data**: POST to `/api/ingest` - works automatically
+
+#### Example: Adding Slack Integration
+
+```yaml
+# New schema - no orchestrator code changes needed
+kb_id: slack-conversations
+mappings:
+  sources:
+    - source_id: "channels"
+      connector_url: "http://localhost:9000/slack/channels"
+      document_type: "channel"
+      extract:
+        node: Channel
+        assign:
+          id: "$.id"
+          name: "$.name"
+```
+
+#### Enterprise Deployment Flexibility
+
+Different environments can use different connector URLs without code changes:
+
+```yaml
+# Development
+connector_url: "http://localhost:8080/api/data"
+
+# Staging  
+connector_url: "http://staging-api.company.com/data"
+
+# Production
+connector_url: "https://api.company.com/data"
+```
+
+### Migration Impact
+
+The transition from v1.1.x to v1.2.0 eliminated approximately **200 lines of hardcoded schema logic**:
+
+**Removed Components**:
+- Hardcoded retail schema definitions
+- Hardcoded confluence schema definitions  
+- If/else connector URL resolution logic
+- Static schema imports
+
+**Added Components**:
+- Dynamic `registeredSchemas` Map integration
+- Schema persistence in registration endpoint
+- Dynamic connector URL resolution
+- Enhanced schema validator with `connector_url` support
+
+This dynamic architecture transforms Knowledge Graph Brain from a demo system into a truly **production-ready, infinitely scalable platform** for enterprise knowledge graph deployment.
+
+---
+
 ## Data Flow Architecture
 
 ### Schema Registration Flow

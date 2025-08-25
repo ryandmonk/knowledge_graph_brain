@@ -8,7 +8,7 @@ schema:
   nodes:
     - label: Document
       key: page_id
-      props: [title, url, space, created, updated, content]
+      props: [page_id, title, url, space, created, content]
     - label: Person
       key: email
       props: [name, email]
@@ -25,49 +25,30 @@ schema:
 mappings:
   sources:
     - source_id: "confluence"
+      connector_url: "http://localhost:3001/pull"
       document_type: "page"
       extract:
         node: Document
         assign:
           page_id: "$.id"
           title: "$.title"
-          url: "$._links.webui"
-          space: "$.space.key"
-          created: "$.history.createdDate"
-          updated: "$.history.lastUpdated.when"
-          content: "$.body.storage.value"
-      edges:
-        - type: AUTHORED_BY
-          from:
-            node: Document
-            key: "$.id"
-          to:
-            node: Person
-            key: "$.history.createdBy.email"
-            assign:
-              name: "$.history.createdBy.displayName"
-              email: "$.history.createdBy.email"
-      extract:
-        node: Document
-        assign:
-          page_id: "$.id"
-          title: "$.title"
-          url:   "$._links.webui"
-          space: "$.space.key"
-          created: "$.history.createdDate"
-          updated: "$.history.lastUpdated.when"
-          content: "$.body.storage.value"
+          url: "$.url"
+          space: "$.space"
+          created: "$.created_date"
+          content: "$.content"
       edges:
         - type: AUTHORED_BY
           from: { node: Document, key: "$.id" }
-          to:
+          to: 
             node: Person
-            key: "$.history.createdBy.email"
+            key: "$.author.email"
             props:
-              name: "$.history.createdBy.displayName"
+              name: "$.author.name"
+              email: "$.author.email"
         - type: DISCUSSES
           from: { node: Document, key: "$.id" }
           to:
             node: Topic
-            key: "$.labels[*].name"
-```
+            key: "$.labels[*]"
+            props:
+              name: "$.labels[*]"

@@ -16,15 +16,22 @@ Content-Type: application/json
 
 #### 1. register_schema
 
-Register a knowledge base schema from YAML configuration.
+Register a knowledge base schema from YAML configuration with **dynamic schema management** (v1.2.0+).
+
+The system now supports unlimited data sources through dynamic schema registration. Schemas are stored in memory and enable automatic connector resolution without code changes.
 
 **Input Schema:**
 ```json
 {
   "kb_id": "string (required)",
-  "schema_yaml": "string (required)"
+  "schema_yaml": "string (required - must include connector_url in mappings)"
 }
 ```
+
+**Schema Requirements (v1.2.0+)**:
+- Each source mapping must include `connector_url` field
+- Connector URLs are resolved dynamically at runtime
+- No hardcoded connector logic - completely schema-driven
 
 **Example:**
 ```json
@@ -36,7 +43,7 @@ Register a knowledge base schema from YAML configuration.
     "name": "register_schema",
     "arguments": {
       "kb_id": "my-kb",
-      "schema_yaml": "kb_id: my-kb\nembedding:\n  provider: \"ollama:mxbai-embed-large\"\n..."
+      "schema_yaml": "kb_id: my-kb\nembedding:\n  provider: \"ollama:mxbai-embed-large\"\nmappings:\n  sources:\n    - source_id: \"data\"\n      connector_url: \"http://localhost:8080/api\"\n      document_type: \"document\"\n..."
     }
   }
 }

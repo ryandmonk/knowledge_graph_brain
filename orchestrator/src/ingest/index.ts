@@ -25,7 +25,7 @@ interface Relationship {
 const NEO4J_URI = process.env.NEO4J_URI || 'bolt://localhost:7687';
 const NEO4J_USER = process.env.NEO4J_USER || 'neo4j';
 const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || 'password';
-const NEO4J_DATABASE = process.env.NEO4J_DATABASE || 'graphbrain';
+const NEO4J_DATABASE = process.env.NEO4J_DATABASE || 'neo4j';
 
 // Initialize Neo4j driver
 let driver: Driver;

@@ -136,6 +136,11 @@ const schemaDSLJsonSchema = {
                 minLength: 1,
                 description: 'Source identifier'
               },
+              connector_url: {
+                type: 'string',
+                format: 'uri',
+                description: 'URL endpoint for the data connector'
+              },
               document_type: {
                 type: 'string',
                 minLength: 1,
