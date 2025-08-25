@@ -10,7 +10,7 @@
 
 **Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.**
 
-A **production-ready** MCP-based orchestrator that ingests data from multiple sources, maps them through declarative YAML schemas, stores them in Neo4j with vector embeddings, and enables GraphRAG via a LangGraph agent. 
+An MCP-based orchestrator that ingests data from multiple sources, maps them through declarative YAML schemas, stores them in Neo4j with vector embeddings, and enables GraphRAG via a LangGraph agent. 
 
 ---
 
@@ -20,7 +20,7 @@ A **production-ready** MCP-based orchestrator that ingests data from multiple so
 - **Dynamic Schema Management**: Register unlimited data sources without code changes using YAML-based schemas with connector URLs.  
 - **Hybrid Intelligence**: Combine semantic vector search and structured graph queries for richer answers.  
 - **Privacy-First AI**: Choose fully local (Ollama) or cloud (OpenAI) embeddings; your data stays under your control.  
-- **Production-Ready**: Dockerized, TypeScript-based, with pluggable connectors, comprehensive testing, and monitoring.  
+- **Development-Ready**: Dockerized, TypeScript-based, with pluggable connectors, testing framework, and health monitoring.  
 - **Extensible**: Pluggable schemas, embeddings, and connectors for any domain or workload.  
 
 ---
@@ -213,7 +213,7 @@ Having issues? Most common problems have quick solutions:
 - **Neo4j issues**: Ensure Neo4j Desktop is started or Docker container is running
 - **Schema registration**: Validate JSON formatting and connector connectivity
 
-For detailed solutions, see **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** with comprehensive debugging steps.
+For detailed solutions, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) with comprehensive debugging steps.
 
 For quick help, see [TESTING.md](./TESTING.md) for setup validation.
 
@@ -231,15 +231,15 @@ For quick help, see [TESTING.md](./TESTING.md) for setup validation.
 - **Multi-Tenant**: Isolated knowledge bases via `kb_id`.  
 - **Privacy-First AI**: Full local operation or cloud flexibility.  
 - **GraphRAG Intelligence**: Multi-step reasoning, real citations, explainable results.  
-- **Production Architecture**: TypeScript, Docker, CLI tools, monitoring, migrations.  
+- **Modern Architecture**: TypeScript, Docker, CLI tools, health monitoring, basic migrations.  
 
 ### Use Cases
-- **Healthcare**: Research papers + clinical data → treatment insights.  
-- **Finance**: Transactions + regulatory docs → compliance detection.  
-- **Retail**: Orders + support tickets → product return analysis.  
-- **Software**: Code + docs + chats → decision traceability.  
-- **Manufacturing**: Processes + reports → operational optimization.  
-- **Legal**: Case law + contracts → regulatory analysis.  
+- **Healthcare**: Research papers + clinical data → potential treatment insights.  
+- **Finance**: Transactions + regulatory docs → potential compliance detection.  
+- **Retail**: Orders + support tickets → potential product return analysis.  
+- **Software**: Code + docs + chats → potential decision traceability.  
+- **Manufacturing**: Processes + reports → potential operational optimization.  
+- **Legal**: Case law + contracts → potential regulatory analysis.  
 
 ---
 
