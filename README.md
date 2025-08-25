@@ -453,19 +453,25 @@ embedding:
 
 ## 🔧 Enterprise Features
 
-### ✅ Production Ready (v1.1.0)
+### 🚀 Dynamic Schema Management
+- **Unlimited Data Sources**: Register any number of schemas without code changes using YAML configuration
+- **Runtime Schema Registration**: Add new knowledge bases via REST API with automatic connector resolution
+- **Multi-Knowledge Base Support**: Isolated data domains with `kb_id` separation for multi-tenant deployments
+- **Connector URL Mapping**: Dynamic connector resolution from schema configuration eliminates hardcoded limitations
+
+### 🛠️ Production Operations
 - **Professional CLI Tools**: `kgb validate` and `kgb status` commands with comprehensive error reporting
 - **Schema Validation**: JSON Schema validation with cross-references, JSONPath syntax checking, and security warnings
 - **Operational Monitoring**: Complete status tracking, run metrics, and system health APIs
 - **Database Migrations**: Automated constraint and index management with versioned migrations
 - **Enterprise Documentation**: Comprehensive deployment guides, API docs, and architecture documentation
 
-### 🚀 Core System (v1.0.0)
+### � Privacy & Intelligence
 - **Privacy-First AI**: Complete local operation with Ollama (no external API dependencies)
 - **Trustworthy RAG**: Full provenance tracking with source attribution and citations
 - **Production Architecture**: Docker deployment, TypeScript codebase, comprehensive testing
 - **Hybrid Intelligence**: Semantic vector search + structured graph queries
-- **Extensible Design**: Pluggable connectors, embedding providers, and schemas
+- **Extensible Design**: Pluggable connectors, embedding providers, and infinitely scalable schemas
 
 ---
 
