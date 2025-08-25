@@ -2,6 +2,7 @@
   <img src="./assets/logo.png" alt="Knowledge Graph Brain Logo" width="200"/>
 
 # Knowledge Graph Brain
+</div>
 
 ---
 
