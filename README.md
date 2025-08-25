@@ -8,19 +8,9 @@
 
 ## 🧠 Overview
 
-**Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.## 🤝 Contributing
+**Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.**
 
-1. Fork the repo  
-2. Create a feature branch  
-3. Add tests (`npm test`)  
-4. Submit a PR  
-
----
-
-## 👤 Author
-
-Created by **Ryan Dombrowski**  
-[GitHub Profile](https://github.com/ryandmonk)**production-ready** MCP-based orchestrator that ingests data from multiple sources, maps them through declarative YAML schemas, stores them in Neo4j with vector embeddings, and enables GraphRAG via a LangGraph agent.
+A **production-ready** MCP-based orchestrator that ingests data from multiple sources, maps them through declarative YAML schemas, stores them in Neo4j with vector embeddings, and enables GraphRAG via a LangGraph agent. 
 
 ---
 
@@ -298,30 +288,6 @@ Supports **local Ollama** (`mxbai-embed-large`, `qwen3:8b`, etc.) or **cloud Ope
 - [Troubleshooting Guide](./TROUBLESHOOTING.md)  
 - [Sample Questions](./langgraph/graph_rag_agent/sample_questions.md)  
 - [Roadmap](./TODO.md)
-
----
-
-## 🔧 Enterprise Features
-
-### 🚀 Dynamic Schema Management
-- **Unlimited Data Sources**: Register any number of schemas without code changes using YAML configuration
-- **Runtime Schema Registration**: Add new knowledge bases via REST API with automatic connector resolution
-- **Multi-Knowledge Base Support**: Isolated data domains with `kb_id` separation for multi-tenant deployments
-- **Connector URL Mapping**: Dynamic connector resolution from schema configuration eliminates hardcoded limitations
-
-### 🛠️ Production Operations
-- **Professional CLI Tools**: `kgb validate` and `kgb status` commands with comprehensive error reporting
-- **Schema Validation**: JSON Schema validation with cross-references, JSONPath syntax checking, and security warnings
-- **Operational Monitoring**: Complete status tracking, run metrics, and system health APIs
-- **Database Migrations**: Automated constraint and index management with versioned migrations
-- **Enterprise Documentation**: Comprehensive deployment guides, API docs, and architecture documentation
-
-### � Privacy & Intelligence
-- **Privacy-First AI**: Complete local operation with Ollama (no external API dependencies)
-- **Trustworthy RAG**: Full provenance tracking with source attribution and citations
-- **Production Architecture**: Docker deployment, TypeScript codebase, comprehensive testing
-- **Hybrid Intelligence**: Semantic vector search + structured graph queries
-- **Extensible Design**: Pluggable connectors, embedding providers, and infinitely scalable schemas
 
 ---
 
