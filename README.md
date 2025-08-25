@@ -60,7 +60,7 @@ A **production-ready** MCP-based knowledge graph orchestrator that ingests data 
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Demo Walkthrough
 
 ### Prerequisites
 - Node.js 18+  
@@ -92,8 +92,9 @@ export OPENAI_API_KEY="your-api-key-here"
 ### 2. Start Neo4j
 **Option A: Neo4j Desktop** ⭐ **Recommended**  
 - Download and install Neo4j Desktop
-- Create a new database with password `password`
+- Create a new database with password `password` (or use default database)
 - Start the database
+- **Optional**: Customize database name via `.env` file (see `orchestrator/.env.example`)
 
 **Option B: Docker**
 ```bash
@@ -116,7 +117,7 @@ npm start
 cd connectors/confluence
 npm install && npm start
 
-# Terminal 3 - Retail Connector (optional)
+# Terminal 3 - Retail Connector (for full demo)
 cd connectors/retail-mock
 npm install && npm start
 ```
@@ -126,7 +127,7 @@ npm install && npm start
 # Check service health
 curl http://localhost:3000/health    # Orchestrator
 curl http://localhost:3001/health    # Confluence connector
-curl http://localhost:8081/health    # Retail connector (optional)
+curl http://localhost:8081/health    # Retail connector (for full demo)
 curl http://localhost:11434/api/tags # Ollama models
 ```
 
@@ -314,7 +315,7 @@ For more help, see [TESTING.md](./TESTING.md) for comprehensive setup validation
 
 ### With LangGraph Agent
 ```bash
-# After completing the Quick Start setup above
+# After completing the Demo Walkthrough setup above
 cd langgraph/graph_rag_agent
 
 # Ask questions about the demo knowledge base
