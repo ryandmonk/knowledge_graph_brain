@@ -30,6 +30,49 @@ services:
     depends_on:
       - neo4j
 
+  confluence-connector:
+    build:
+      context: ../connectors/confluence
+      dockerfile: Dockerfile
+    container_name: confluence-connector
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+
+  github-connector:
+    build:
+      context: ../connectors/github
+      dockerfile: Dockerfile
+    container_name: github-connector
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+  slack-connector:
+    build:
+      context: ../connectors/slack
+      dockerfile: Dockerfile
+    container_name: slack-connector
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_WORKSPACE=${SLACK_WORKSPACE}
+
+  retail-connector:
+    build:
+      context: ../connectors/retail-mock
+      dockerfile: Dockerfile
+    container_name: retail-connector
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+
 volumes:
   neo4j_data:
   neo4j_logs:

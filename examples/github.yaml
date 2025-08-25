@@ -1,0 +1,135 @@
+kb_id: github-kb
+name: GitHub Knowledge Base
+description: GitHub repositories, issues, pull requests, commits, and releases
+embedding:
+  provider: "ollama:mxbai-embed-large"
+  chunking:
+    strategy: "by_paragraphs"
+    max_tokens: 1000
+
+schema:
+  nodes:
+    - label: Repository
+      key: id
+      props: [id, name, description, content, url, language, stars, forks, created_at, updated_at, topics, license, default_branch, is_private, is_fork]
+    
+    - label: Issue
+      key: id
+      props: [id, title, description, content, url, number, state, created_at, updated_at, closed_at, labels, comments_count]
+    
+    - label: PullRequest
+      key: id
+      props: [id, title, description, content, url, number, state, draft, created_at, updated_at, closed_at, merged_at, head_branch, base_branch, additions, deletions, changed_files, commits_count]
+    
+    - label: Commit
+      key: id
+      props: [id, title, description, content, url, sha, created_at]
+    
+    - label: Release
+      key: id
+      props: [id, title, description, content, url, tag_name, target_commitish, draft, prerelease, created_at, published_at]
+    
+    - label: Person
+      key: login
+      props: [login, name, email, type, url]
+
+  relationships:
+    - type: OWNS
+      from: Person
+      to: Repository
+      
+    - type: AUTHORED_BY
+      from: Issue
+      to: Person
+      
+    - type: AUTHORED_BY
+      from: PullRequest
+      to: Person
+      
+    - type: AUTHORED_BY
+      from: Commit
+      to: Person
+      
+    - type: AUTHORED_BY
+      from: Release
+      to: Person
+      
+    - type: BELONGS_TO
+      from: Issue
+      to: Repository
+      
+    - type: BELONGS_TO
+      from: PullRequest
+      to: Repository
+      
+    - type: BELONGS_TO
+      from: Commit
+      to: Repository
+      
+    - type: BELONGS_TO
+      from: Release
+      to: Repository
+
+mappings:
+  sources:
+    - source_id: github-repos
+      connector_url: "http://localhost:3002"
+      document_type: repository
+      extract:
+        node: Repository
+        assign:
+          id: "$.id"
+          name: "$.title"
+          description: "$.description"
+          content: "$.content"
+          url: "$.url"
+          language: "$.language"
+          stars: "$.stars"
+          forks: "$.forks"
+          created_at: "$.created_at"
+          updated_at: "$.updated_at"
+          topics: "$.topics"
+          license: "$.license"
+          default_branch: "$.default_branch"
+          is_private: "$.is_private"
+          is_fork: "$.is_fork"
+      edges:
+        - type: OWNS
+          from: { node: Person, key: "$.owner.login" }
+          to: { node: Repository, key: "$.id" }
+          props:
+            login: "$.owner.login"
+            type: "$.owner.type"
+            url: "$.owner.url"
+
+    - source_id: github-issues
+      connector_url: "http://localhost:3002"
+      document_type: issue
+      extract:
+        node: Issue
+        assign:
+          id: "$.id"
+          title: "$.title"
+          description: "$.description"
+          content: "$.content"
+          url: "$.url"
+          number: "$.number"
+          state: "$.state"
+          created_at: "$.created_at"
+          updated_at: "$.updated_at"
+          closed_at: "$.closed_at"
+          labels: "$.labels"
+          comments_count: "$.comments_count"
+      edges:
+        - type: AUTHORED_BY
+          from: { node: Issue, key: "$.id" }
+          to: { node: Person, key: "$.author.login" }
+          props:
+            login: "$.author.login"
+            type: "$.author.type"
+            url: "$.author.url"
+        - type: BELONGS_TO
+          from: { node: Issue, key: "$.id" }
+          to: { node: Repository, key: "$.repository" }
+          props:
+            name: "$.repository"

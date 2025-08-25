@@ -403,8 +403,41 @@ export class SchemaDSLValidator {
     const errors: ValidationError[] = [];
     
     const validateJSONPath = (path: string, context: string): void => {
+      // Basic pattern validation for JSONPath syntax
+      if (!path.startsWith('$.')) {
+        errors.push({
+          field: context,
+          message: `JSONPath must start with '$.' - got: ${path}`,
+          value: path,
+          suggestion: 'Use valid JSONPath syntax. Examples: "$.id", "$.author.name", "$.labels[*].name"'
+        });
+        return;
+      }
+
+      // Check for obviously malformed expressions
+      const malformedPatterns = [
+        /\]\]\]\[/, // Multiple closing/opening brackets
+        /\[\[\[/, // Multiple opening brackets  
+        /\]\[/, // Bracket mismatch patterns
+        /\.[^a-zA-Z_*\[]/, // Invalid characters after dot
+        /\*[^.\[\]]/, // Invalid characters after wildcard
+      ];
+
+      for (const pattern of malformedPatterns) {
+        if (pattern.test(path)) {
+          errors.push({
+            field: context,
+            message: `Malformed JSONPath expression: ${path}`,
+            value: path,
+            suggestion: 'Use valid JSONPath syntax. Examples: "$.id", "$.author.name", "$.labels[*].name"'
+          });
+          return;
+        }
+      }
+
       try {
-        // Test if the JSONPath is syntactically valid
+        // Test if the JSONPath is syntactically valid - but jsonpath-plus is too lenient,
+        // so we mainly rely on pattern matching above
         JSONPath({path, json: {}});
       } catch (error) {
         errors.push({

@@ -1,0 +1,335 @@
+kb_id: slack-kb
+name: Slack Knowledge Base
+description: Slack messages, channels, threads, and user interactions
+
+schema:
+  nodes:
+    - name: SlackMessage
+      description: Message posted in a Slack channel
+      properties:
+        - name: id
+          type: string
+          description: Unique message identifier
+        - name: title
+          type: string
+          description: Message title (first line)
+        - name: content
+          type: string
+          description: Full message content
+        - name: text
+          type: string
+          description: Raw message text
+        - name: timestamp
+          type: datetime
+          description: Message timestamp
+        - name: created_at
+          type: datetime
+          description: Message creation date
+        - name: user_id
+          type: string
+          description: Author user ID
+        - name: channel_id
+          type: string
+          description: Channel ID where message was posted
+        - name: channel_name
+          type: string
+          description: Channel name
+        - name: thread_ts
+          type: string
+          description: Thread timestamp (if part of thread)
+        - name: reply_count
+          type: integer
+          description: Number of replies
+        - name: reactions
+          type: array
+          description: Message reactions
+        - name: attachments
+          type: array
+          description: Message attachments
+        - name: files
+          type: array
+          description: Attached files
+        - name: is_bot
+          type: boolean
+          description: Whether message is from a bot
+        - name: bot_id
+          type: string
+          description: Bot ID if from bot
+        - name: subtype
+          type: string
+          description: Message subtype
+        - name: permalink
+          type: string
+          description: Permalink to message
+        - name: edited
+          type: object
+          description: Edit information if message was edited
+
+    - name: SlackChannel
+      description: Slack channel with metadata
+      properties:
+        - name: id
+          type: string
+          description: Unique channel identifier
+        - name: title
+          type: string
+          description: Channel title (with # prefix)
+        - name: description
+          type: string
+          description: Channel topic or purpose
+        - name: content
+          type: string
+          description: Channel description content
+        - name: name
+          type: string
+          description: Channel name (without #)
+        - name: channel_id
+          type: string
+          description: Channel ID
+        - name: created_at
+          type: datetime
+          description: Channel creation date
+        - name: creator
+          type: string
+          description: Channel creator user ID
+        - name: is_private
+          type: boolean
+          description: Whether channel is private
+        - name: is_archived
+          type: boolean
+          description: Whether channel is archived
+        - name: is_general
+          type: boolean
+          description: Whether this is the general channel
+        - name: member_count
+          type: integer
+          description: Number of channel members
+        - name: topic
+          type: string
+          description: Channel topic
+        - name: purpose
+          type: string
+          description: Channel purpose
+
+    - name: SlackThread
+      description: Slack thread conversation
+      properties:
+        - name: id
+          type: string
+          description: Thread identifier (parent message timestamp)
+        - name: title
+          type: string
+          description: Thread title (parent message content)
+        - name: content
+          type: string
+          description: Thread summary
+        - name: channel_id
+          type: string
+          description: Channel where thread exists
+        - name: parent_message_id
+          type: string
+          description: Parent message ID
+        - name: reply_count
+          type: integer
+          description: Number of replies in thread
+        - name: created_at
+          type: datetime
+          description: Thread start date
+
+    - name: Person
+      description: Slack user
+      properties:
+        - name: id
+          type: string
+          description: User ID
+        - name: name
+          type: string
+          description: Display name
+        - name: real_name
+          type: string
+          description: Real name
+        - name: email
+          type: string
+          description: Email address
+        - name: profile_image
+          type: string
+          description: Profile image URL
+        - name: is_bot
+          type: boolean
+          description: Whether user is a bot
+        - name: is_admin
+          type: boolean
+          description: Whether user is admin
+        - name: timezone
+          type: string
+          description: User timezone
+
+  relationships:
+    - name: POSTED_BY
+      description: Message posted by a user
+      from: SlackMessage
+      to: Person
+      
+    - name: POSTED_IN
+      description: Message posted in a channel
+      from: SlackMessage
+      to: SlackChannel
+      
+    - name: CREATED_BY
+      description: Channel created by a user
+      from: SlackChannel
+      to: Person
+      
+    - name: MEMBER_OF
+      description: User is member of a channel
+      from: Person
+      to: SlackChannel
+      
+    - name: REPLY_TO
+      description: Message is a reply to another message
+      from: SlackMessage
+      to: SlackMessage
+      
+    - name: THREAD_IN
+      description: Thread exists in a channel
+      from: SlackThread
+      to: SlackChannel
+      
+    - name: PART_OF
+      description: Message is part of a thread
+      from: SlackMessage
+      to: SlackThread
+      
+    - name: STARTED_BY
+      description: Thread started by a user
+      from: SlackThread
+      to: Person
+
+mappings:
+  sources:
+    - source_id: slack-messages
+      connector_url: http://localhost:3003
+      document_type: message
+      extract:
+        node: SlackMessage
+        assign:
+          id: $.id
+          title: $.title
+          content: $.content
+          text: $.text
+          timestamp: $.timestamp
+          created_at: $.created_at
+          user_id: $.user_id
+          channel_id: $.channel_id
+          channel_name: $.channel_name
+          thread_ts: $.thread_ts
+          reply_count: $.reply_count
+          reactions: $.reactions
+          attachments: $.attachments
+          files: $.files
+          is_bot: $.is_bot
+          bot_id: $.bot_id
+          subtype: $.subtype
+          permalink: $.permalink
+          edited: $.edited
+      edges:
+        - type: POSTED_BY
+          from:
+            node: SlackMessage
+            key: $.id
+          to:
+            node: Person
+            key: $.user_id
+            props:
+              id: $.user_id
+        - type: POSTED_IN
+          from:
+            node: SlackMessage
+            key: $.id
+          to:
+            node: SlackChannel
+            key: $.channel_id
+            props:
+              id: $.channel_id
+              name: $.channel_name
+              title: "#$.channel_name"
+
+    - source_id: slack-channels
+      connector_url: http://localhost:3003
+      document_type: channel
+      extract:
+        node: SlackChannel
+        assign:
+          id: $.id
+          title: $.title
+          description: $.description
+          content: $.content
+          name: $.name
+          channel_id: $.channel_id
+          created_at: $.created_at
+          creator: $.creator
+          is_private: $.is_private
+          is_archived: $.is_archived
+          is_general: $.is_general
+          member_count: $.member_count
+          topic: $.topic
+          purpose: $.purpose
+      edges:
+        - type: CREATED_BY
+          from:
+            node: SlackChannel
+            key: $.id
+          to:
+            node: Person
+            key: $.creator
+            props:
+              id: $.creator
+
+    - source_id: slack-threads
+      connector_url: http://localhost:3003
+      document_type: thread_reply
+      extract:
+        node: SlackMessage
+        assign:
+          id: $.id
+          title: $.title
+          content: $.content
+          text: $.text
+          timestamp: $.timestamp
+          created_at: $.created_at
+          user_id: $.user_id
+          channel_id: $.channel_id
+          channel_name: $.channel_name
+          thread_ts: $.thread_ts
+          parent_message_id: $.parent_message_id
+          is_bot: $.is_bot
+          permalink: $.permalink
+      edges:
+        - type: POSTED_BY
+          from:
+            node: SlackMessage
+            key: $.id
+          to:
+            node: Person
+            key: $.user_id
+            props:
+              id: $.user_id
+        - type: POSTED_IN
+          from:
+            node: SlackMessage
+            key: $.id
+          to:
+            node: SlackChannel
+            key: $.channel_id
+            props:
+              id: $.channel_id
+              name: $.channel_name
+        - type: REPLY_TO
+          from:
+            node: SlackMessage
+            key: $.id
+          to:
+            node: SlackMessage
+            key: $.parent_message_id
+            props:
+              id: $.parent_message_id

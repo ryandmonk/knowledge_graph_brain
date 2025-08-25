@@ -1,0 +1,69 @@
+kb_id: slack-kb
+embedding:
+  provider: "ollama:mxbai-embed-large"
+  chunking:
+    strategy: "paragraph"
+    max_tokens: 1000
+
+schema:
+  nodes:
+    - label: Message
+      key: id
+      props: [id, text, content, user, channel, timestamp, thread_ts, reply_count, reactions]
+    
+    - label: Channel
+      key: id
+      props: [id, name, topic, purpose, is_archived, is_general, member_count]
+    
+    - label: User
+      key: id
+      props: [id, name, real_name, display_name, email, title, status_text]
+
+  relationships:
+    - type: POSTED_IN
+      from: Message
+      to: Channel
+    
+    - type: AUTHORED_BY
+      from: Message
+      to: User
+    
+    - type: MEMBER_OF
+      from: User
+      to: Channel
+
+mappings:
+  sources:
+    - source_id: slack-messages
+      connector_url: "http://localhost:3003/pull?data_types=messages"
+      document_type: message
+      extract:
+        node: Message
+        assign:
+          id: "$.id"
+          text: "$.text"
+          content: "$.content"
+          user: "$.user"
+          channel: "$.channel"
+          timestamp: "$.timestamp"
+          thread_ts: "$.thread_ts"
+          reply_count: "$.reply_count"
+          reactions: "$.reactions"
+      edges:
+        - type: POSTED_IN
+          from: { node: Message, key: "$.id" }
+          to:
+            node: Channel
+            key: "$.channel"
+            props:
+              id: "$.channel"
+              name: "$.channel_name"
+        
+        - type: AUTHORED_BY
+          from: { node: Message, key: "$.id" }
+          to:
+            node: User
+            key: "$.user"
+            props:
+              id: "$.user"
+              name: "$.user_name"

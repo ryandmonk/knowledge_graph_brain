@@ -6,49 +6,182 @@ embedding:
     max_tokens: 1200
 schema:
   nodes:
-    - label: Document
-      key: page_id
-      props: [page_id, title, url, space, created, content]
-    - label: Person
-      key: email
-      props: [name, email]
-    - label: Topic
-      key: name
-      props: [name]
+    - label: Space
+      key: id
+      props: [id, key, name, description, type, created_at, updated_at]
+    - label: Page
+      key: id
+      props: [id, title, content, content_type, created_at, updated_at, version, status, url]
+    - label: BlogPost
+      key: id
+      props: [id, title, content, excerpt, created_at, updated_at, url]
+    - label: Comment
+      key: id
+      props: [id, content, created_at, updated_at]
+    - label: Attachment
+      key: id
+      props: [id, title, media_type, file_size, created_at, download_url]
+    - label: User
+      key: account_id
+      props: [account_id, display_name, email]
+    - label: Label
+      key: id
+      props: [id, name, prefix]
   relationships:
-    - type: AUTHORED_BY
-      from: Document
-      to: Person
-    - type: DISCUSSES
-      from: Document
-      to: Topic
+    - type: BELONGS_TO_SPACE
+      from: Page
+      to: Space
+    
+    - type: BELONGS_TO_SPACE
+      from: BlogPost
+      to: Space
+      
+    - type: HAS_PARENT
+      from: Page
+      to: Page
+    
+    - type: HAS_CHILD
+      from: Page
+      to: Page
+    
+    - type: HAS_COMMENT
+      from: Page
+      to: Comment
+      
+    - type: HAS_COMMENT
+      from: BlogPost
+      to: Comment
+    
+    - type: HAS_ATTACHMENT
+      from: Page
+      to: Attachment
+      
+    - type: HAS_ATTACHMENT
+      from: BlogPost
+      to: Attachment
+    
+    - type: CREATED_BY
+      from: Space
+      to: User
+      
+    - type: CREATED_BY
+      from: Page
+      to: User
+      
+    - type: CREATED_BY
+      from: BlogPost
+      to: User
+      
+    - type: CREATED_BY
+      from: Comment
+      to: User
+      
+    - type: CREATED_BY
+      from: Attachment
+      to: User
+    
+    - type: UPDATED_BY
+      from: Page
+      to: User
+      
+    - type: UPDATED_BY
+      from: BlogPost
+      to: User
+      
+    - type: UPDATED_BY
+      from: Comment
+      to: User
+    
+    - type: HAS_LABEL
+      from: Page
+      to: Label
+      
+    - type: HAS_LABEL
+      from: BlogPost
+      to: Label
+      
+    - type: HAS_LABEL
+      from: Space
+      to: Label
+    
+    - type: COMMENTED_BY
+      from: Comment
+      to: User
 mappings:
   sources:
     - source_id: "confluence"
-      connector_url: "http://localhost:3001/pull"
-      document_type: "page"
+      connector_url: "http://localhost:3004/pull"
+      document_type: "confluence_content"
       extract:
-        node: Document
-        assign:
-          page_id: "$.id"
-          title: "$.title"
-          url: "$.url"
-          space: "$.space"
-          created: "$.created_date"
-          content: "$.content"
+        # Spaces
+        - node: Space
+          filter: "$.type == 'space'"
+          assign:
+            id: "$.id"
+            key: "$.key"
+            name: "$.name"
+            description: "$.description"
+            type: "$.type"
+            created_at: "$.created_at"
+            updated_at: "$.updated_at"
+        # Pages
+        - node: Page
+          filter: "$.content_type == 'page'"
+          assign:
+            id: "$.id"
+            title: "$.title"
+            content: "$.content"
+            content_type: "$.content_type"
+            created_at: "$.created_at"
+            updated_at: "$.updated_at"
+            version: "$.version"
+            status: "$.status"
+            url: "$.url"
+        # Blog Posts
+        - node: BlogPost
+          filter: "$.content_type == 'blogpost'"
+          assign:
+            id: "$.id"
+            title: "$.title"
+            content: "$.content"
+            excerpt: "$.excerpt"
+            created_at: "$.created_at"
+            updated_at: "$.updated_at"
+            url: "$.url"
+        # Users
+        - node: User
+          source: "$.author"
+          assign:
+            account_id: "$.account_id"
+            display_name: "$.display_name"
+            email: "$.email"
       edges:
-        - type: AUTHORED_BY
-          from: { node: Document, key: "$.id" }
-          to: 
-            node: Person
-            key: "$.author.email"
-            props:
-              name: "$.author.name"
-              email: "$.author.email"
-        - type: DISCUSSES
-          from: { node: Document, key: "$.id" }
+        - type: BELONGS_TO_SPACE
+          from: { node: [Page, BlogPost], key: "$.id" }
           to:
-            node: Topic
-            key: "$.labels[*]"
+            node: Space
+            key: "$.space_id"
+        - type: CREATED_BY
+          from: { node: [Page, BlogPost], key: "$.id" }
+          to:
+            node: User
+            key: "$.author.account_id"
             props:
-              name: "$.labels[*]"
+              account_id: "$.author.account_id"
+              display_name: "$.author.display_name"
+              email: "$.author.email"
+        - type: HAS_PARENT
+          from: { node: Page, key: "$.id" }
+          to:
+            node: Page
+            key: "$.parent_id"
+            condition: "$.parent_id != null"
+        - type: HAS_LABEL
+          from: { node: [Page, BlogPost], key: "$.id" }
+          to:
+            node: Label
+            key: "$.labels[*].id"
+            props:
+              id: "$.labels[*].id"
+              name: "$.labels[*].name"
+              prefix: "$.labels[*].prefix"

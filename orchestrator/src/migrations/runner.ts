@@ -15,7 +15,8 @@ export class MigrationRunner {
 
   constructor(driver: Driver, migrationsPath?: string) {
     this.driver = driver;
-    this.migrationsPath = migrationsPath || join(process.cwd(), 'infra/migrations');
+    // Default to project root's infra/migrations, not relative to current working directory
+    this.migrationsPath = migrationsPath || resolve(__dirname, '../../../infra/migrations');
   }
 
   /**
@@ -229,8 +230,33 @@ export class MigrationRunner {
         
         await session.run(constraintCypher);
         console.log(`✅ Created constraint: ${constraintName}`);
+
+        // Create provenance constraints for this node type
+        const provenanceConstraints = [
+          { field: 'kb_id', name: `${sanitizedKbId}_${node.label.toLowerCase()}_provenance_kb` },
+          { field: 'source_id', name: `${sanitizedKbId}_${node.label.toLowerCase()}_provenance_source` },
+          { field: 'run_id', name: `${sanitizedKbId}_${node.label.toLowerCase()}_provenance_run` },
+          { field: 'updated_at', name: `${sanitizedKbId}_${node.label.toLowerCase()}_provenance_updated` }
+        ];
+
+        for (const prov of provenanceConstraints) {
+          try {
+            const provCypher = `
+              CREATE CONSTRAINT ${prov.name} IF NOT EXISTS 
+              FOR (n:\`${node.label}\`) REQUIRE n.${prov.field} IS NOT NULL
+            `;
+            
+            await session.run(provCypher);
+            console.log(`✅ Created provenance constraint: ${prov.name}`);
+          } catch (error) {
+            console.warn(`⚠️  Could not create provenance constraint ${prov.name}:`, error);
+          }
+        }
       }
-      
+
+      // Create performance indexes for this KB
+      await this.createKBPerformanceIndexes(kb_id, schema);
+
     } catch (error) {
       console.error(`❌ Failed to create constraints for KB ${kb_id}:`, error);
       throw error;
@@ -282,6 +308,56 @@ export class MigrationRunner {
       
     } catch (error) {
       console.error(`❌ Failed to create vector indexes for KB ${kb_id}:`, error);
+      throw error;
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Create performance indexes for a KB's node types
+   */
+  async createKBPerformanceIndexes(kb_id: string, schema: any): Promise<void> {
+    if (!schema?.schema?.nodes) {
+      return;
+    }
+
+    console.log(`⚡ Creating performance indexes for KB: ${kb_id}`);
+    
+    const session = this.driver.session();
+    
+    try {
+      // Sanitize kb_id for use in index names (replace hyphens with underscores)
+      const sanitizedKbId = kb_id.replace(/-/g, '_');
+      
+      for (const node of schema.schema.nodes) {
+        const indexPrefix = `${sanitizedKbId}_${node.label.toLowerCase()}`;
+        
+        // Create common performance indexes
+        const indexes = [
+          { name: `${indexPrefix}_kb_id`, property: 'kb_id' },
+          { name: `${indexPrefix}_source_id`, property: 'source_id' },
+          { name: `${indexPrefix}_updated_at`, property: 'updated_at' },
+          { name: `${indexPrefix}_created_at`, property: 'created_at' }
+        ];
+
+        for (const idx of indexes) {
+          try {
+            const indexCypher = `
+              CREATE INDEX ${idx.name} IF NOT EXISTS 
+              FOR (n:\`${node.label}\`) ON (n.${idx.property})
+            `;
+            
+            await session.run(indexCypher);
+            console.log(`⚡ Created performance index: ${idx.name}`);
+          } catch (error) {
+            console.warn(`⚠️  Could not create index ${idx.name}:`, error);
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed to create performance indexes for KB ${kb_id}:`, error);
       throw error;
     } finally {
       await session.close();

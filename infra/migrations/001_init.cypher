@@ -38,47 +38,34 @@ FOR (n:Topic) REQUIRE (n.kb_id, n.name) IS UNIQUE;
 // 2. PROVENANCE CONSTRAINTS - Enforce traceability
 // --------------------------------------------------
 
-// Every node MUST have provenance information
-CREATE CONSTRAINT node_provenance_kb IF NOT EXISTS 
-FOR (n) REQUIRE n.kb_id IS NOT NULL;
+// NOTE: Neo4j doesn't support global node constraints without labels.
+// Provenance enforcement is handled by the application layer.
+// Each specific node type will have its provenance constraints created
+// dynamically when KBs are registered.
 
-CREATE CONSTRAINT node_provenance_source IF NOT EXISTS 
-FOR (n) REQUIRE n.source_id IS NOT NULL;
+// Example of provenance constraints (created dynamically per KB):
+// CREATE CONSTRAINT document_provenance_kb IF NOT EXISTS 
+// FOR (n:Document) REQUIRE n.kb_id IS NOT NULL;
+// CREATE CONSTRAINT document_provenance_source IF NOT EXISTS 
+// FOR (n:Document) REQUIRE n.source_id IS NOT NULL;
 
-CREATE CONSTRAINT node_provenance_run IF NOT EXISTS 
-FOR (n) REQUIRE n.run_id IS NOT NULL;
-
-CREATE CONSTRAINT node_provenance_timestamp IF NOT EXISTS 
-FOR (n) REQUIRE n.updated_at IS NOT NULL;
-
-// Relationships also need provenance
-CREATE CONSTRAINT rel_provenance_kb IF NOT EXISTS 
-FOR ()-[r]-() REQUIRE r.kb_id IS NOT NULL;
-
-CREATE CONSTRAINT rel_provenance_source IF NOT EXISTS 
-FOR ()-[r]-() REQUIRE r.source_id IS NOT NULL;
-
-CREATE CONSTRAINT rel_provenance_run IF NOT EXISTS 
-FOR ()-[r]-() REQUIRE r.run_id IS NOT NULL;
+// Relationship provenance constraints - Neo4j 5.0+ syntax with specific rel types
+// Note: Relationship constraints without types aren't supported in all Neo4j versions
+// These will be created dynamically when needed per relationship type
 
 // --------------------------------------------------
 // 3. PERFORMANCE INDEXES - Optimize common queries
 // --------------------------------------------------
 
-// KB-scoped queries (most common access pattern)
-CREATE INDEX kb_id_index IF NOT EXISTS FOR (n) ON (n.kb_id);
+// Neo4j doesn't support global node indexes without labels.
+// Performance indexes are created dynamically per node type when KBs are registered.
+// Common patterns include:
+// - KB-scoped queries: CREATE INDEX FOR (n:Document) ON (n.kb_id)
+// - Time-based queries: CREATE INDEX FOR (n:Document) ON (n.updated_at)
+// - Source tracking: CREATE INDEX FOR (n:Document) ON (n.source_id)
 
-// Source tracking
-CREATE INDEX source_id_index IF NOT EXISTS FOR (n) ON (n.source_id);
-
-// Time-based queries for sync and monitoring
-CREATE INDEX updated_at_index IF NOT EXISTS FOR (n) ON (n.updated_at);
-CREATE INDEX created_at_index IF NOT EXISTS FOR (n) ON (n.created_at);
-
-// Relationship provenance indexes
-CREATE INDEX rel_kb_index IF NOT EXISTS FOR ()-[r]-() ON (r.kb_id);
-CREATE INDEX rel_source_index IF NOT EXISTS FOR ()-[r]-() ON (r.source_id);
-CREATE INDEX rel_run_index IF NOT EXISTS FOR ()-[r]-() ON (r.run_id);
+// Relationship indexes - also not supported without relationship types in all Neo4j versions
+// These will be created dynamically per relationship type when needed
 
 // --------------------------------------------------
 // 4. VECTOR INDEXES - Support semantic search

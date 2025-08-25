@@ -63,13 +63,15 @@ export async function setupKB(kb_id: string, schema?: any): Promise<void> {
       await migrationRunner.createKBVectorIndexes(kb_id, schema);
     }
     
-    // Register KB metadata
+    // Register KB metadata with proper provenance
     const session = getDriver().session({ database: NEO4J_DATABASE });
     
     try {
       await session.run(`
         MERGE (kb:KnowledgeBase {kb_id: $kb_id})
-        ON CREATE SET kb.created_at = timestamp()
+        ON CREATE SET kb.created_at = timestamp(),
+                      kb.source_id = 'system',
+                      kb.run_id = 'kb-setup-' + $kb_id
         SET kb.updated_at = timestamp(),
             kb.schema_version = COALESCE(kb.schema_version, 0) + 1
         RETURN kb

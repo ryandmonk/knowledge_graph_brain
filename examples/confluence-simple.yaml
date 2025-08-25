@@ -1,0 +1,66 @@
+kb_id: confluence-demo
+embedding:
+  provider: "ollama:mxbai-embed-large"
+  chunking:
+    strategy: "by_headings"
+    max_tokens: 1200
+
+schema:
+  nodes:
+    - label: Page
+      key: id
+      props: [id, title, content, url, space, created_at, updated_at, author_name, author_email]
+    
+    - label: Space
+      key: id  
+      props: [id, key, name, description]
+      
+    - label: Person
+      key: email
+      props: [name, email]
+
+  relationships:
+    - type: BELONGS_TO_SPACE
+      from: Page
+      to: Space
+      
+    - type: AUTHORED_BY
+      from: Page
+      to: Person
+
+mappings:
+  sources:
+    - source_id: "confluence"
+      connector_url: "http://localhost:3004/pull"
+      document_type: "page"
+      extract:
+        node: Page
+        assign:
+          id: "$.id"
+          title: "$.title"
+          content: "$.content"
+          url: "$.url"
+          space: "$.space_key"
+          created_at: "$.created_at"
+          updated_at: "$.updated_at"
+          author_name: "$.author.display_name"
+          author_email: "$.author.email"
+      edges:
+        - type: BELONGS_TO_SPACE
+          from: { node: Page, key: "$.id" }
+          to:
+            node: Space
+            key: "$.space_id"
+            props:
+              id: "$.space_id"
+              key: "$.space_key"
+              name: "$.space_name"
+              description: "$.space_description"
+        - type: AUTHORED_BY
+          from: { node: Page, key: "$.id" }
+          to:
+            node: Person
+            key: "$.author.email"
+            props:
+              name: "$.author.display_name"
+              email: "$.author.email"
