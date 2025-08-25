@@ -1,38 +1,41 @@
 <div align="center">
   <img src="./assets/logo.png" alt="Knowledge Graph Brain Logo" width="200"/>
-  
+
 # Knowledge Graph Brain
 </div>
-
-- **Unifies Data Silos**: Connects APIs, databases, document systems, and any data source into a single knowledge graph.  
-- **Dynamic Schema Management**: Register unlimited data sources without code changes using YAML schemas with connector URLs.
-- **Trustworthy RAG**: Hybrid semantic + graph search with full provenance and citations for compliance.  
-- **Privacy-First**: 100% local AI (Ollama) or cloud AI (OpenAI) — your choice for embeddings.  
-- **Production-Ready**: Dockerized, TypeScript-based, extensible with pluggable schemas and connectors.  
 
 ---
 
 ## 🧠 Overview
 
-**Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.**
+**Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.## 🤝 Contributing
 
-A **production-ready** MCP-based knowledge graph orchestrator that ingests data from multiple sources, maps them through declarative YAML schemas, stores in Neo4j with vector embeddings, and provides intelligent GraphRAG capabilities through a LangGraph agent.
-
----
-
-## 🎯 What This System Does
-
-- **📥 Multi-Source Ingestion**: Connects to document systems, databases, APIs, or any data source via pluggable connectors  
-- **🗺️ Smart Mapping**: Declarative YAML schemas with JSONPath expressions for mapping to graph structures  
-- **🧠 Knowledge Graph**: Stores structured data in Neo4j with provenance (source_id, run_id, timestamps)  
-- **🔍 Vector Search**: Local Ollama embeddings for semantic similarity search (no external API required)  
-- **🤖 GraphRAG Agent**: LangGraph agent that combines graph queries + semantic search with local LLM reasoning  
-- **🔗 MCP Integration**: All capabilities exposed as Model Context Protocol tools  
-- **🔒 Privacy First**: 100% local operation — your data never leaves your machine  
+1. Fork the repo  
+2. Create a feature branch  
+3. Add tests (`npm test`)  
+4. Submit a PR  
 
 ---
 
-## 🏗️ Architecture Overview
+## 👤 Author
+
+Created by **Ryan Dombrowski**  
+[GitHub Profile](https://github.com/ryandmonk)**production-ready** MCP-based orchestrator that ingests data from multiple sources, maps them through declarative YAML schemas, stores them in Neo4j with vector embeddings, and enables GraphRAG via a LangGraph agent.
+
+---
+
+## ✨ Key Features
+
+- **Unify Data Silos**: Connect APIs, databases, document systems, and any source into a single knowledge graph with provenance and citations.  
+- **Dynamic Schema Management**: Register unlimited data sources without code changes using YAML-based schemas with connector URLs.  
+- **Hybrid Intelligence**: Combine semantic vector search and structured graph queries for richer answers.  
+- **Privacy-First AI**: Choose fully local (Ollama) or cloud (OpenAI) embeddings; your data stays under your control.  
+- **Production-Ready**: Dockerized, TypeScript-based, with pluggable connectors, comprehensive testing, and monitoring.  
+- **Extensible**: Pluggable schemas, embeddings, and connectors for any domain or workload.  
+
+---
+
+## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -213,167 +216,60 @@ independently identified the same documents
 
 ### 🛠️ Troubleshooting
 
-**Common Issues:**
+Having issues? Most common problems have quick solutions:
 
-1. **"Connection refused" errors:**
-   ```bash
-   # Check if all services are running
-   ps aux | grep -E "(node|ollama|neo4j)"
-   
-   # Check port usage
-   lsof -i :3000  # Orchestrator
-   lsof -i :3001  # Confluence connector
-   lsof -i :7687  # Neo4j
-   lsof -i :11434 # Ollama
-   ```
+- **Connection refused**: Check all services are running with health endpoints
+- **Ollama models missing**: Run `ollama pull mxbai-embed-large` and `ollama pull qwen3:8b`  
+- **Neo4j issues**: Ensure Neo4j Desktop is started or Docker container is running
+- **Schema registration**: Validate JSON formatting and connector connectivity
 
-2. **Ollama model not found:**
-   ```bash
-   # Verify models are installed
-   ollama list
-   
-   # Pull missing models
-   ollama pull mxbai-embed-large
-   ollama pull qwen3:8b
-   ```
+For detailed solutions, see **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** with comprehensive debugging steps.
 
-3. **Neo4j connection issues:**
-   - Ensure Neo4j Desktop is running
-   - Check password is set to `password`
-   - Verify database is started (green play button in Neo4j Desktop)
-
-4. **Schema registration fails:**
-   - Ensure orchestrator is running (`curl http://localhost:3000/health`)
-   - Check JSON formatting in the curl command
-   - View orchestrator logs for detailed errors
-
-5. **Build failures:**
-   ```bash
-   # Clean install if npm install fails
-   rm -rf node_modules package-lock.json
-   npm install
-   ```
-
-For more help, see [TESTING.md](./TESTING.md) for comprehensive setup validation.
+For quick help, see [TESTING.md](./TESTING.md) for setup validation.
 
 ---
 
-## 🎊 Achievements & Differentiators
-
-- **🔒 Privacy-First**: Fully local pipeline with Ollama — no API calls  
-- **🧠 Intelligent Reasoning**: Multi-step answers combining semantic + graph with citations  
-- **🏗️ Production-Ready**: TypeScript, error handling, full test suite, Docker infra  
-- **🔌 Extensible**: Pluggable schemas + connectors, clean MCP integration  
-- **⚡ Fast**: Optimized queries, caching, responsive for real-time enterprise queries  
-
----
-
-## 🏢 Why Enterprises Need This
+## � Enterprise Value
 
 ### Problems Solved
-1. **Data Silos** — unify document systems, databases, CRM, ticketing, messaging platforms, etc.  
-   > *Example: "Show me all projects where customer complaints intersect with product design changes in the last 6 months."*  
+1. **Data Silos** — unify across document systems, databases, CRMs, ticketing, messaging, etc.  
+2. **Structured + Unstructured** — capture both with graphs and embeddings.  
+3. **Provenance & Trust** — auditable, citation-backed answers.  
 
-2. **Structured + Unstructured Data** — Graph + embeddings captures both.  
+### Differentiators
+- **Custom Ontologies**: Declarative per-domain schemas.  
+- **Multi-Tenant**: Isolated knowledge bases via `kb_id`.  
+- **Privacy-First AI**: Full local operation or cloud flexibility.  
+- **GraphRAG Intelligence**: Multi-step reasoning, real citations, explainable results.  
+- **Production Architecture**: TypeScript, Docker, CLI tools, monitoring, migrations.  
 
-3. **Provenance & Trust** — GraphRAG provides traceable, auditable answers.  
-
-### Why This Solution Wins
-- **Custom Ontologies** per domain via declarative schemas  
-- **Multi-tenant** architecture (kb_id + provenance edges)  
-- **Pluggable Embeddings** (local Ollama or cloud)  
-- **Agent-Ready Foundation** for LangGraph, CrewAI, autonomous workflows  
-
-### Real Use Cases
-- **Healthcare**: Research papers + clinical trials + lab notes → treatment insights  
-- **Financial Services**: Transaction data + regulatory docs → compliance risk detection  
-- **Retail & E-commerce**: Orders + support tickets → high-return product insights  
-- **Software Development**: Code repos + documentation + communications → decision traceability  
-- **Manufacturing**: Process docs + quality reports → operational optimization  
-- **Legal & Compliance**: Case law + contracts + policies → regulatory analysis  
+### Use Cases
+- **Healthcare**: Research papers + clinical data → treatment insights.  
+- **Finance**: Transactions + regulatory docs → compliance detection.  
+- **Retail**: Orders + support tickets → product return analysis.  
+- **Software**: Code + docs + chats → decision traceability.  
+- **Manufacturing**: Processes + reports → operational optimization.  
+- **Legal**: Case law + contracts → regulatory analysis.  
 
 ---
 
-### 💎 **What Makes This Special**
-1. **Complete Privacy**: Your data never leaves your machine
-2. **Local AI Models**: Uses Ollama for both embeddings and reasoning
-3. **Hybrid Intelligence**: Combines vector search with graph relationships
-4. **Real Citations**: Provides actual node IDs and properties as evidence
-5. **Multi-step Reasoning**: Shows its work with detailed search steps
-6. **Production Architecture**: TypeScript, comprehensive testing, Docker ready
-
-### 🎯 **Proven Capabilities**
-- ✅ **Complex Question Answering** with evidence and citations
-- ✅ **Multi-source Data Integration** with full provenance tracking  
-- ✅ **Real-time Semantic Search** using local embeddings
-- ✅ **Graph Relationship Discovery** via Cypher queries
-- ✅ **Intelligent Synthesis** combining multiple evidence sources
-- ✅ **Privacy-preserving AI** with local model execution
-
----
 ## 📋 Usage Examples
 
-### With LangGraph Agent
+### LangGraph Agent
 ```bash
-# After completing the Demo Walkthrough setup above
-cd langgraph/graph_rag_agent
-
-# Ask questions about the demo knowledge base
 npm run dev "What documents are available about knowledge graphs?" "confluence-demo"
-npm run dev "Who are the authors mentioned in the system?" "confluence-demo" 
-npm run dev "Tell me about knowledge graph tutorials" "confluence-demo"
 ```
 
-### Direct API Testing with Multiple Knowledge Bases
+### Direct API
 ```bash
-# Test Confluence semantic search
 curl -X POST http://localhost:3000/api/semantic-search \
-  -H "Content-Type: application/json" \
-  -d '{
-    "kb_id": "confluence-demo",
-    "text": "knowledge graphs tutorial",
-    "top_k": 3
-  }'
-
-# Test Retail semantic search
-curl -X POST http://localhost:3000/api/semantic-search \
-  -H "Content-Type: application/json" \
-  -d '{
-    "kb_id": "retail-demo", 
-    "text": "electronics headphones",
-    "top_k": 3
-  }'
-
-# Test Confluence graph queries
-curl -X POST http://localhost:3000/api/search-graph \
-  -H "Content-Type: application/json" \
-  -d '{
-    "kb_id": "confluence-demo",
-    "cypher": "MATCH (d:Document)-[:AUTHORED_BY]->(p:Person) RETURN d.title, p.name LIMIT 5"
-  }'
-
-# Test Retail graph queries  
-curl -X POST http://localhost:3000/api/search-graph \
-  -H "Content-Type: application/json" \
-  -d '{
-    "kb_id": "retail-demo",
-    "cypher": "MATCH (p:Product) WHERE p.category = \"Electronics\" RETURN p.name, p.price LIMIT 5"
-  }'
-
-# Check system status
-curl http://localhost:3000/api/status
+  -d '{"kb_id": "retail-demo", "text": "electronics headphones", "top_k": 3}'
 ```
 
-### Using the CLI Tools
+### CLI Tools
 ```bash
-# Validate multiple schema files
 cd cli
-npm run build
 ./dist/index.js validate ../examples/confluence.yaml
-./dist/index.js validate ../examples/retail.yaml
-
-# Check system status for multiple knowledge bases
-./dist/index.js status confluence-demo
 ./dist/index.js status retail-demo
 ```
 
@@ -381,74 +277,27 @@ npm run build
 
 ## 🛠️ Extending the System
 
-### Adding a New Data Source
-**The system now supports unlimited data sources without code changes!**
-
 1. Create connector in `connectors/your-source/`  
-2. Implement `pull()` endpoint that returns JSON data
-3. Create YAML schema with `connector_url` in mappings:
-   ```yaml
-   mappings:
-     sources:
-       - source_id: "your-source"
-         connector_url: "http://localhost:your-port/endpoint"
-         document_type: "your-type"
-         extract:
-           node: YourNode
-           assign:
-             field: "$.json.path"
-   ```
-4. Register schema via `/api/register-schema`
-5. Ingest data via `/api/ingest` with automatic connector resolution  
+2. Write a schema with `connector_url` mappings  
+3. Register via `/api/register-schema`  
+4. Ingest via `/api/ingest`  
 
-### AI Provider Options
-**Choose between local privacy or cloud performance:**
-
-**🔒 Ollama (Local/Private)**
-- **Embeddings**: `mxbai-embed-large`, `nomic-embed-text`, `all-minilm`  
-- **LLMs**: `qwen3:8b`, `llama3.1`, `qwen3:32b`, `gemma3:27b`, `mistral`
-- Configure in YAML: `provider: "ollama:model-name"`
-
-**☁️ OpenAI (Cloud/Fast)**
-- **Embeddings**: `text-embedding-ada-002` (automatic)
-- **LLMs**: Use Ollama for reasoning, OpenAI for embeddings
-- Configure in YAML: `provider: "openai:text-embedding-ada-002"`
-- Set: `OPENAI_API_KEY=your-key`
-
-### Configuration Examples
-```yaml
-# Local Ollama setup
-embedding:
-  provider: "ollama:mxbai-embed-large"
-
-# Or OpenAI for embeddings
-embedding:
-  provider: "openai:text-embedding-ada-002"
-```
+Supports **local Ollama** (`mxbai-embed-large`, `qwen3:8b`, etc.) or **cloud OpenAI** (`text-embedding-ada-002`).
 
 ---
 
 ## 📚 Documentation
 
-### Core Documentation
-- **[Architecture Guide](./docs/ARCHITECTURE.md)** - Complete system architecture and design patterns
-- **[API Documentation](./docs/API.md)** - MCP and REST API reference with examples  
-- **[Deployment Guide](./docs/DEPLOYMENT.md)** - Production deployment for Docker, Kubernetes, and scaling
-- **[CLI Tools Guide](./cli/README.md)** - Professional CLI tools for validation and monitoring
-
-### Schema & Configuration
-- **[DSL Reference](./docs/dsl.md)** - YAML schema language specification
-- **[Connectors Guide](./docs/connectors.md)** - Data source connector development
-- **[GraphRAG Guide](./docs/graphrag.md)** - Intelligent question answering capabilities
-
-### Examples & Testing
-- **[Testing Guide](./TESTING.md)** - Comprehensive testing procedures and validation
-- **[Schema Examples](./examples/)** - Enterprise data source demonstration schemas
-- **[Sample Questions](./langgraph/graph_rag_agent/sample_questions.md)** - Example queries and expected responses
-
-### Project Management
-- **[Changelog](./CHANGELOG.md)** - Detailed release history and feature updates
-- **[TODO & Roadmap](./TODO.md)** - Current status and future development plans
+- [Architecture Guide](./docs/ARCHITECTURE.md)  
+- [API Documentation](./docs/API.md)  
+- [Deployment Guide](./docs/DEPLOYMENT.md)  
+- [DSL Reference](./docs/dsl.md)  
+- [Connectors Guide](./docs/connectors.md)  
+- [GraphRAG Guide](./docs/graphrag.md)  
+- [Testing Guide](./TESTING.md)  
+- [Troubleshooting Guide](./TROUBLESHOOTING.md)  
+- [Sample Questions](./langgraph/graph_rag_agent/sample_questions.md)  
+- [Roadmap](./TODO.md)
 
 ---
 
