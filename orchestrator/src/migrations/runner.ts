@@ -215,13 +215,16 @@ export class MigrationRunner {
     const session = this.driver.session();
     
     try {
+      // Sanitize kb_id for use in constraint names (replace hyphens with underscores)
+      const sanitizedKbId = kb_id.replace(/-/g, '_');
+      
       for (const node of schema.schema.nodes) {
-        const constraintName = `${kb_id}_${node.label.toLowerCase()}_${node.key}`;
+        const constraintName = `${sanitizedKbId}_${node.label.toLowerCase()}_${node.key}`;
         
         // Create unique constraint for this node type in this KB
         const constraintCypher = `
           CREATE CONSTRAINT ${constraintName} IF NOT EXISTS 
-          FOR (n:${node.label}) REQUIRE (n.kb_id, n.${node.key}) IS UNIQUE
+          FOR (n:\`${node.label}\`) REQUIRE (n.kb_id, n.${node.key}) IS UNIQUE
         `;
         
         await session.run(constraintCypher);
@@ -257,13 +260,16 @@ export class MigrationRunner {
     const session = this.driver.session();
     
     try {
+      // Sanitize kb_id for use in index names (replace hyphens with underscores)
+      const sanitizedKbId = kb_id.replace(/-/g, '_');
+      
       for (const node of schema.schema.nodes) {
-        const indexName = `${kb_id}_${node.label.toLowerCase()}_embeddings`;
+        const indexName = `${sanitizedKbId}_${node.label.toLowerCase()}_embeddings`;
         
         // Create vector index for this node type
         const indexCypher = `
           CREATE VECTOR INDEX ${indexName} IF NOT EXISTS
-          FOR (n:${node.label}) ON (n.embedding) 
+          FOR (n:\`${node.label}\`) ON (n.embedding) 
           OPTIONS {indexConfig: {
             \`vector.dimensions\`: ${dimensions},
             \`vector.similarity_function\`: 'cosine'

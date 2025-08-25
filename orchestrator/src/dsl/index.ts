@@ -93,7 +93,7 @@ export function extractData(document: any, path: string): any {
 }
 
 // Function to apply mapping to a document
-export function applyMapping(document: any, mapping: MappingSource): { nodes: any[]; relationships: any[] } {
+export function applyMapping(document: any, mapping: MappingSource, schema: SchemaDSL): { nodes: any[]; relationships: any[] } {
   const nodes: any[] = [];
   const relationships: any[] = [];
   
@@ -101,14 +101,27 @@ export function applyMapping(document: any, mapping: MappingSource): { nodes: an
   const nodeLabel = mapping.extract.node;
   const nodeProps: any = {};
   
+  // Find the node schema to get the key field
+  const nodeSchema = schema.schema.nodes.find(n => n.label === nodeLabel);
+  if (!nodeSchema) {
+    throw new Error(`Node schema not found for label: ${nodeLabel}`);
+  }
+  
   for (const [prop, path] of Object.entries(mapping.extract.assign)) {
     const extracted = extractData(document, path);
     // For simplicity, we take the first value if multiple are returned
     nodeProps[prop] = Array.isArray(extracted) ? extracted[0] : extracted;
   }
   
+  // Extract the key value for the node
+  const keyValue = nodeProps[nodeSchema.key];
+  if (!keyValue) {
+    throw new Error(`Key field '${nodeSchema.key}' not found in extracted properties for node ${nodeLabel}`);
+  }
+
   nodes.push({
     label: nodeLabel,
+    key: keyValue,
     properties: nodeProps
   });
   
@@ -123,11 +136,34 @@ export function applyMapping(document: any, mapping: MappingSource): { nodes: an
     for (const toKey of toArray) {
       const relProps: any = {};
       
+      // Create the "to" node if it has properties defined
       if (edge.to.props) {
+        const toNodeSchema = schema.schema.nodes.find(n => n.label === edge.to.node);
+        if (!toNodeSchema) {
+          throw new Error(`Node schema not found for label: ${edge.to.node}`);
+        }
+
+        const toNodeProps: any = {};
         for (const [prop, path] of Object.entries(edge.to.props)) {
           const extracted = extractData(document, path);
           // For simplicity, we take the first value if multiple are returned
-          relProps[prop] = Array.isArray(extracted) ? extracted[0] : extracted;
+          toNodeProps[prop] = Array.isArray(extracted) ? extracted[0] : extracted;
+        }
+
+        // Get the key value for the "to" node
+        const toKeyValue = toNodeProps[toNodeSchema.key];
+        if (!toKeyValue) {
+          throw new Error(`Key field '${toNodeSchema.key}' not found in extracted properties for node ${edge.to.node}`);
+        }
+
+        // Add the "to" node to nodes array (check if it already exists)
+        const existingNode = nodes.find(n => n.label === edge.to.node && n.key === toKeyValue);
+        if (!existingNode) {
+          nodes.push({
+            label: edge.to.node,
+            key: toKeyValue,
+            properties: toNodeProps
+          });
         }
       }
       

@@ -69,9 +69,9 @@ export async function setupKB(kb_id: string, schema?: any): Promise<void> {
     try {
       await session.run(`
         MERGE (kb:KnowledgeBase {kb_id: $kb_id})
+        ON CREATE SET kb.created_at = timestamp()
         SET kb.updated_at = timestamp(),
             kb.schema_version = COALESCE(kb.schema_version, 0) + 1
-        ON CREATE SET kb.created_at = timestamp()
         RETURN kb
       `, { kb_id });
       

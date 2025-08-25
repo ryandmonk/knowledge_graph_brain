@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Implementation } from '@modelcontextprotocol/sdk/types.js';
-import { parseSchema, applyMapping } from '../dsl/index.js';
-import { ConnectorClient } from '../connectors/index.js';
-import { mergeNodesAndRels, semanticSearch, executeCypher } from '../ingest/index.js';
-import { EmbeddingProviderFactory } from '../embeddings/index.js';
-import { startRun, updateRunStats, completeRun, addRunError, getKnowledgeBaseStatus } from '../status/index.js';
+import { parseSchema, applyMapping } from '../dsl/index';
+import { ConnectorClient } from '../connectors/index';
+import { mergeNodesAndRels, semanticSearch, executeCypher } from '../ingest/index';
+import { EmbeddingProviderFactory } from '../embeddings/index';
+import { startRun, updateRunStats, completeRun, addRunError, getKnowledgeBaseStatus } from '../status/index';
 
 // Define the structure for our schema
 export interface Schema {
@@ -261,7 +261,7 @@ server.registerTool(
       
       for (const document of documents) {
         try {
-          const { nodes, relationships } = applyMapping(document, mapping);
+          const { nodes, relationships } = applyMapping(document, mapping, schema);
           
           // 4. Merge nodes/relationships into Neo4j with provenance
           const { createdNodes, createdRels } = await mergeNodesAndRels(

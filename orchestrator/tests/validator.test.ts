@@ -45,7 +45,7 @@ mappings:
             props:
               name: "$.author.name"
               email: "$.author.email"
-`;
+  `;
 
   test('should validate a correct schema without errors', () => {
     const schema = parse(validSchemaYaml);

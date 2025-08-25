@@ -1,6 +1,15 @@
 import { parseSchema, applyMapping } from '../src/dsl/index';
-import { initDriver, mergeNodesAndRels, setupKB } from '../src/ingest/index';
+import { initDriver, mergeNodesAndRels, setupKB, executeCypher } from '../src/ingest/index';
 import { SchemaDSLValidator } from '../src/dsl/validator';
+
+// Helper function to convert Neo4j integers to regular numbers
+const toNumber = (val: any) => {
+  if (typeof val === 'number') return val;
+  if (val && typeof val === 'object' && ('low' in val)) {
+    return val.toNumber ? val.toNumber() : val.low;
+  }
+  return val;
+};
 
 // E2E test for the critical requirement: idempotent ingestion
 describe('Idempotent Ingestion E2E', () => {
@@ -99,7 +108,7 @@ mappings:
     let totalRels = 0;
     
     for (const document of testDocuments) {
-      const { nodes, relationships } = applyMapping(document, mapping);
+      const { nodes, relationships } = applyMapping(document, mapping, schema);
       
       const { createdNodes, createdRels } = await mergeNodesAndRels(
         'test-idempotent-kb',
@@ -126,7 +135,6 @@ mappings:
     const mapping = schema.mappings.sources[0];
     
     // Get initial counts from database
-    const { executeCypher } = await import('../src/ingest/index');
     
     const initialCountResult = await executeCypher(
       'MATCH (n) WHERE n.kb_id = $kb_id RETURN count(n) as nodeCount',
@@ -137,18 +145,16 @@ mappings:
       'MATCH ()-[r]-() WHERE r.kb_id = $kb_id RETURN count(r) as relCount',
       { kb_id: 'test-idempotent-kb' }
     );
-    
-    const initialNodes = initialCountResult[0]?.nodeCount || 0;
-    const initialRels = initialRelCountResult[0]?.relCount || 0;
-    
-    console.log(`Before second ingestion: ${initialNodes} nodes, ${initialRels} relationships`);
+
+    const initialNodes = toNumber(initialCountResult[0]?.nodeCount) || 0;
+    const initialRels = toNumber(initialRelCountResult[0]?.relCount) || 0;    console.log(`Before second ingestion: ${initialNodes} nodes, ${initialRels} relationships`);
     
     // Ingest the same data again
     let secondRunNodes = 0;
     let secondRunRels = 0;
     
     for (const document of testDocuments) {
-      const { nodes, relationships } = applyMapping(document, mapping);
+      const { nodes, relationships } = applyMapping(document, mapping, schema);
       
       const { createdNodes, createdRels } = await mergeNodesAndRels(
         'test-idempotent-kb',
@@ -177,8 +183,8 @@ mappings:
       { kb_id: 'test-idempotent-kb' }
     );
     
-    const finalNodes = finalCountResult[0]?.nodeCount || 0;
-    const finalRels = finalRelCountResult[0]?.relCount || 0;
+    const finalNodes = toNumber(finalCountResult[0]?.nodeCount) || 0;
+    const finalRels = toNumber(finalRelCountResult[0]?.relCount) || 0;
     
     expect(finalNodes).toBe(initialNodes);
     expect(finalRels).toBe(initialRels);
@@ -197,7 +203,7 @@ mappings:
       content: 'This document has been updated with new content'
     };
     
-    const { nodes, relationships } = applyMapping(updatedDocument, mapping);
+    const { nodes, relationships } = applyMapping(updatedDocument, mapping, schema);
     
     const { createdNodes, createdRels } = await mergeNodesAndRels(
       'test-idempotent-kb',
@@ -212,26 +218,22 @@ mappings:
     expect(createdRels).toBe(0);
     
     // Verify the document was updated
-    const { executeCypher } = await import('../src/ingest/index');
     const updateResult = await executeCypher(
-      'test-idempotent-kb',
       'MATCH (d:Document {kb_id: $kb_id, page_id: $page_id}) RETURN d.title as title, d.run_id as run_id',
       { kb_id: 'test-idempotent-kb', page_id: 'doc-1' }
     );
     
-    const record = updateResult.records[0];
-    expect(record?.get('title')).toBe('Updated Test Document 1');
-    expect(record?.get('run_id')).toBe('run-3');
+    const record = updateResult[0];
+    expect(record?.title).toBe('Updated Test Document 1');
+    expect(record?.run_id).toBe('run-3');
     
     console.log('Document successfully updated with new run_id');
   }, 30000);
 
   test('should enforce provenance on all nodes and relationships', async () => {
-    const { executeCypher } = await import('../src/ingest/index');
     
     // Check that all nodes have required provenance fields
     const nodeProvenanceResult = await executeCypher(
-      'test-idempotent-kb',
       `MATCH (n) WHERE n.kb_id = $kb_id 
        RETURN count(n) as total,
               count(n.kb_id) as has_kb_id,
@@ -241,12 +243,12 @@ mappings:
       { kb_id: 'test-idempotent-kb' }
     );
     
-    const nodeRecord = nodeProvenanceResult.records[0];
-    const total = nodeRecord?.get('total')?.toNumber();
-    const hasKbId = nodeRecord?.get('has_kb_id')?.toNumber();
-    const hasSourceId = nodeRecord?.get('has_source_id')?.toNumber();
-    const hasRunId = nodeRecord?.get('has_run_id')?.toNumber();
-    const hasTimestamp = nodeRecord?.get('has_timestamp')?.toNumber();
+    const nodeRecord = nodeProvenanceResult[0];
+    const total = toNumber(nodeRecord?.total) || 0;
+    const hasKbId = toNumber(nodeRecord?.has_kb_id) || 0;
+    const hasSourceId = toNumber(nodeRecord?.has_source_id) || 0;
+    const hasRunId = toNumber(nodeRecord?.has_run_id) || 0;
+    const hasTimestamp = toNumber(nodeRecord?.has_timestamp) || 0;
     
     // All nodes must have all provenance fields
     expect(hasKbId).toBe(total);
@@ -256,7 +258,6 @@ mappings:
     
     // Check that all relationships have required provenance fields
     const relProvenanceResult = await executeCypher(
-      'test-idempotent-kb',
       `MATCH ()-[r]-() WHERE r.kb_id = $kb_id 
        RETURN count(r) as total,
               count(r.kb_id) as has_kb_id,
@@ -266,12 +267,12 @@ mappings:
       { kb_id: 'test-idempotent-kb' }
     );
     
-    const relRecord = relProvenanceResult.records[0];
-    const relTotal = relRecord?.get('total')?.toNumber();
-    const relHasKbId = relRecord?.get('has_kb_id')?.toNumber();
-    const relHasSourceId = relRecord?.get('has_source_id')?.toNumber();
-    const relHasRunId = relRecord?.get('has_run_id')?.toNumber();
-    const relHasTimestamp = relRecord?.get('has_timestamp')?.toNumber();
+    const relRecord = relProvenanceResult[0];
+    const relTotal = toNumber(relRecord?.total) || 0;
+    const relHasKbId = toNumber(relRecord?.has_kb_id) || 0;
+    const relHasSourceId = toNumber(relRecord?.has_source_id) || 0;
+    const relHasRunId = toNumber(relRecord?.has_run_id) || 0;
+    const relHasTimestamp = toNumber(relRecord?.has_timestamp) || 0;
     
     // All relationships must have all provenance fields
     expect(relHasKbId).toBe(relTotal);
@@ -284,16 +285,13 @@ mappings:
 
   afterAll(async () => {
     // Clean up test data
-    const { executeCypher } = await import('../src/ingest/index');
     
     await executeCypher(
-      'test-idempotent-kb',
       'MATCH (n) WHERE n.kb_id = $kb_id DETACH DELETE n',
       { kb_id: 'test-idempotent-kb' }
     );
     
     await executeCypher(
-      'test-idempotent-kb', 
       'MATCH (kb:KnowledgeBase {kb_id: $kb_id}) DELETE kb',
       { kb_id: 'test-idempotent-kb' }
     );

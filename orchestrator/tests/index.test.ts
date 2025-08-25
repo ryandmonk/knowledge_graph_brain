@@ -16,10 +16,16 @@ schema:
     - label: Document
       key: id
       props: [title, content]
+    - label: Person
+      key: email  
+      props: [name, email]
   relationships:
     - type: RELATED_TO
       from: Document
       to: Document
+    - type: AUTHORED_BY
+      from: Document
+      to: Person
 mappings:
   sources:
     - source_id: "test-source"
@@ -49,6 +55,41 @@ mappings:
 });
 
 test('applyMapping should correctly extract nodes and relationships', () => {
+  // Create a test schema
+  const testSchema = {
+    kb_id: 'test-kb',
+    embedding: {
+      provider: "ollama:mxbai-embed-large",
+      chunking: {
+        strategy: "by_headings"
+      }
+    },
+    schema: {
+      nodes: [
+        {
+          label: 'Document',
+          key: 'id',
+          props: ['id', 'title', 'content']
+        },
+        {
+          label: 'Person',
+          key: 'email',
+          props: ['name', 'email']
+        }
+      ],
+      relationships: [
+        {
+          type: 'AUTHORED_BY',
+          from: 'Document',
+          to: 'Person'
+        }
+      ]
+    },
+    mappings: {
+      sources: []
+    }
+  };
+
   const mapping = {
     source_id: "test-source",
     document_type: "page",
@@ -69,7 +110,7 @@ test('applyMapping should correctly extract nodes and relationships', () => {
       to: {
         node: 'Person',
         key: "$.author.email",
-        assign: {
+        props: {
           name: "$.author.name",
           email: "$.author.email"
         }
@@ -87,10 +128,10 @@ test('applyMapping should correctly extract nodes and relationships', () => {
     }
   };
 
-  const result = applyMapping(document, mapping);
+  const result = applyMapping(document, mapping, testSchema);
   const { nodes, relationships } = result;
 
-  expect(nodes).toHaveLength(1);
+  expect(nodes).toHaveLength(2); // Document + Person node
   expect(nodes[0].label).toBe('Document');
   expect(nodes[0].properties.id).toBe('doc-1');
 

@@ -1,6 +1,4 @@
 # Retail Schema Example
-
-```yaml
 kb_id: retail-demo
 embedding:
   provider: "ollama:mxbai-embed-large"
@@ -40,7 +38,7 @@ mappings:
       edges:
         - type: CONTAINS
           from: { node: Order, key: "$.id" }
-          to:
+          to: 
             node: Product
             key: "$.line_items[*].sku"
             props:
@@ -48,7 +46,4 @@ mappings:
               unit_price: "$.line_items[*].price"
         - type: PURCHASED_BY
           from: { node: Order, key: "$.id" }
-          to:
-            node: Customer
-            key: "$.customer.email"
-```
+          to: { node: Customer, key: "$.customer.email" }
