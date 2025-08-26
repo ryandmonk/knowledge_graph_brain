@@ -1,8 +1,9 @@
 import { useState, useEffect, Fragment } from 'react';
 import { CheckCircle, XCircle, RefreshCw, Settings, Database, Link, CheckSquare } from 'lucide-react';
-import { api } from '../utils/api';
+import { api, type EnvironmentConfig } from '../utils/api';
 import ConnectorConfigModal from './ConnectorConfigModal';
 import DemoModeToggle from './DemoModeToggle';
+import { LLMModelSelector } from './LLMModelSelector';
 
 interface StepProps {
   isActive: boolean;
@@ -170,7 +171,7 @@ function ServiceCheckStep({ onNext }: { onNext: () => void }) {
 
 // Step 2: Environment Configuration Component
 function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
-  const [config, setConfig] = useState<any>({});
+  const [config, setConfig] = useState<Partial<EnvironmentConfig>>({});
   const [loading, setLoading] = useState(true);
   const [testResults, setTestResults] = useState<Record<string, string>>({});
 
@@ -289,8 +290,16 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
                   <p className="font-mono bg-gray-50 p-2 rounded">{config.OLLAMA_BASE_URL || 'http://localhost:11434'}</p>
                 </div>
                 <div>
-                  <label className="block text-gray-600">LLM Model</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.LLM_MODEL || 'llama3.2'}</p>
+                  <label className="block text-gray-600 mb-1">LLM Model</label>
+                  <LLMModelSelector 
+                    currentModel={config.LLM_MODEL || 'qwen3:8b'}
+                    onModelChange={(model) => {
+                      // Update the config state when model changes
+                      setConfig(prev => ({ ...prev, LLM_MODEL: model }));
+                      console.log(`LLM model updated to: ${model}`);
+                    }}
+                    size="small"
+                  />
                 </div>
                 <div>
                   <label className="block text-gray-600">Embedding Provider</label>

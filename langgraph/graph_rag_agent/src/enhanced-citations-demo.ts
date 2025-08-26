@@ -17,7 +17,7 @@ import {
 // Demo configuration
 const DEMO_CONFIG = {
   mcpUrl: 'http://localhost:3000',
-  ollamaModel: 'qwen2.5:7b',
+  ollamaModel: 'qwen3:8b',
   testKbId: 'confluence-demo'
 };
 

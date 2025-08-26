@@ -325,8 +325,10 @@ app.get('/api/config', async (req: Request, res: Response) => {
     res.json({
       DEMO_MODE: config.DEMO_MODE,
       EMBEDDING_PROVIDER: config.EMBEDDING_PROVIDER,
+      EMBEDDING_MODEL: config.EMBEDDING_MODEL,
       NEO4J_URI: config.NEO4J_URI,
       OLLAMA_BASE_URL: config.OLLAMA_BASE_URL,
+      LLM_MODEL: config.LLM_MODEL,
       environment: envVars
     });
   } catch (error) {
@@ -726,6 +728,127 @@ app.post('/api/connectors/:connectorId/config', async (req: Request, res: Respon
     res.status(500).json({ 
       success: false, 
       error: 'Failed to update configuration', 
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get available Ollama models
+app.get('/api/ollama/models', async (req: Request, res: Response) => {
+  try {
+    const currentConfig = getConfig();
+    const ollamaUrl = currentConfig.OLLAMA_BASE_URL || 'http://localhost:11434';
+    
+    const response = await fetch(`${ollamaUrl}/api/tags`);
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json() as { models?: Array<{ name: string; size: number; modified_at: string; digest: string }> };
+    const models = data.models?.map((model) => ({
+      name: model.name,
+      size: model.size,
+      modified_at: model.modified_at,
+      digest: model.digest
+    })) || [];
+    
+    res.json({
+      success: true,
+      models,
+      current_model: currentConfig.LLM_MODEL,
+      ollama_url: ollamaUrl
+    });
+  } catch (error) {
+    console.error('Error fetching Ollama models:', error);
+    const currentConfig = getConfig();
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch Ollama models',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      ollama_url: currentConfig.OLLAMA_BASE_URL || 'http://localhost:11434'
+    });
+  }
+});
+
+// Update LLM model configuration
+app.post('/api/config/llm', async (req: Request, res: Response) => {
+  try {
+    const { model } = req.body;
+    
+    if (!model) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Model name is required' 
+      });
+    }
+
+    // Validate that the model exists in Ollama
+    try {
+      const currentConfig = getConfig();
+      const ollamaUrl = currentConfig.OLLAMA_BASE_URL || 'http://localhost:11434';
+      const modelsResponse = await fetch(`${ollamaUrl}/api/tags`);
+      
+      if (modelsResponse.ok) {
+        const data = await modelsResponse.json() as { models?: Array<{ name: string }> };
+        const availableModels = data.models?.map((m) => m.name) || [];
+        
+        if (!availableModels.includes(model)) {
+          return res.status(400).json({
+            success: false,
+            error: `Model '${model}' not found in Ollama`,
+            available_models: availableModels,
+            suggestion: `Try running: ollama pull ${model}`
+          });
+        }
+      }
+    } catch (ollamaError) {
+      console.warn('Could not validate model with Ollama:', ollamaError);
+      // Continue anyway - user might know what they're doing
+    }
+
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    // Update .env file
+    const envPath = path.join(__dirname, '../../../.env');
+    let envContent = '';
+    
+    try {
+      envContent = await fs.readFile(envPath, 'utf-8');
+    } catch (error) {
+      // Create from .env.example if .env doesn't exist
+      try {
+        envContent = await fs.readFile(path.join(__dirname, '../../../.env.example'), 'utf-8');
+      } catch (err) {
+        envContent = 'LLM_MODEL=qwen3:8b\n';
+      }
+    }
+    
+    // Update LLM_MODEL
+    const llmModelRegex = /^LLM_MODEL=.*$/m;
+    if (llmModelRegex.test(envContent)) {
+      envContent = envContent.replace(llmModelRegex, `LLM_MODEL=${model}`);
+    } else {
+      envContent += `\nLLM_MODEL=${model}`;
+    }
+    
+    await fs.writeFile(envPath, envContent);
+    
+    const previousConfig = getConfig();
+    res.json({ 
+      success: true, 
+      message: `LLM model updated to '${model}'. Restart required for LangGraph agent to use new model.`,
+      previous_model: previousConfig.LLM_MODEL,
+      new_model: model,
+      requiresRestart: true,
+      affectedServices: ['LangGraph Agent', 'Question Answering']
+    });
+
+  } catch (error) {
+    console.error('Error updating LLM model:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to update LLM model configuration', 
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

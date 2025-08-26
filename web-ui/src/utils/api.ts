@@ -76,6 +76,20 @@ export interface EnvironmentConfig {
   OPENAI_API_KEY?: string;
 }
 
+export interface OllamaModel {
+  name: string;
+  size: number;
+  modified_at: string;
+  digest: string;
+}
+
+export interface OllamaModelsResponse {
+  success: boolean;
+  models: OllamaModel[];
+  current_model: string;
+  ollama_url: string;
+}
+
 class KnowledgeGraphAPI {
   private client: AxiosInstance;
 
@@ -165,13 +179,12 @@ class KnowledgeGraphAPI {
 
   // Environment Configuration
   async getEnvironmentConfig(): Promise<EnvironmentConfig> {
-    // This endpoint doesn't exist yet - we'll add it to the orchestrator
     try {
       const response = await this.client.get('/api/config');
       return response.data;
     } catch (error) {
       // Fallback - get config from system status
-      await this.getSystemStatus();
+      console.warn('Could not get environment config, using fallback:', error);
       return {
         DEMO_MODE: true, // We'll detect this from the system
         NEO4J_URI: 'bolt://localhost:7687',
@@ -181,7 +194,7 @@ class KnowledgeGraphAPI {
         EMBEDDING_PROVIDER: 'ollama',
         EMBEDDING_MODEL: 'mxbai-embed-large',
         OLLAMA_BASE_URL: 'http://localhost:11434',
-        LLM_MODEL: 'qwen2.5:7b'
+        LLM_MODEL: 'qwen3:8b'
       };
     }
   }
@@ -229,6 +242,17 @@ class KnowledgeGraphAPI {
   async updateEnvironmentConfig(config: Partial<EnvironmentConfig>): Promise<void> {
     // This endpoint doesn't exist yet - we'll add it to the orchestrator
     await this.client.post('/api/config', config);
+  }
+
+  // Ollama Model Management
+  async getAvailableModels(): Promise<OllamaModelsResponse> {
+    const response = await this.client.get('/api/ollama/models');
+    return response.data;
+  }
+
+  async updateLLMModel(model: string): Promise<{ success: boolean; message: string; requiresRestart: boolean; affectedServices: string[] }> {
+    const response = await this.client.post('/api/config/llm', { model });
+    return response.data;
   }
 
   // Knowledge Base Management

@@ -142,7 +142,7 @@ docker-compose -f docker-compose.prod.yml up -d
 
 # Initialize Ollama models
 docker exec -it knowledge_graph_brain_ollama_1 ollama pull mxbai-embed-large
-docker exec -it knowledge_graph_brain_ollama_1 ollama pull qwen2.5:7b
+docker exec -it knowledge_graph_brain_ollama_1 ollama pull qwen3:8b
 
 # Verify deployment
 curl http://localhost:3000/api/status
@@ -598,7 +598,7 @@ docker exec ollama ollama list
 
 # Pull missing models
 docker exec ollama ollama pull mxbai-embed-large
-docker exec ollama ollama pull qwen2.5:7b
+docker exec ollama ollama pull qwen3:8b
 ```
 
 ### Performance Tuning

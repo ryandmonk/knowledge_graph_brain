@@ -49,7 +49,7 @@ export function getConfig(): OrchestratorConfig {
     EMBEDDING_MODEL: process.env.EMBEDDING_MODEL || 'mxbai-embed-large',
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    LLM_MODEL: process.env.LLM_MODEL || 'qwen2.5:7b',
+    LLM_MODEL: process.env.LLM_MODEL || 'qwen3:8b',
     
     // Service Configuration
     PORT: parseInt(process.env.ORCHESTRATOR_PORT || '3000'),

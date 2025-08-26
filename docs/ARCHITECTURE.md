@@ -146,7 +146,7 @@ Intelligent question-answering agent with multi-step reasoning capabilities.
 ```
 
 **Integration Points**:
-- **Local LLM**: Ollama qwen2.5:7b for reasoning (privacy-first)
+- **Local LLM**: Ollama qwen3:8b for reasoning (privacy-first)
 - **Embeddings**: mxbai-embed-large for semantic search
 - **Knowledge Graph**: Direct Neo4j queries via search_graph tool
 - **MCP Protocol**: Seamless integration with orchestrator capabilities
