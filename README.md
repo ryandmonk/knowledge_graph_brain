@@ -34,8 +34,8 @@ The Universal MCP Server exposes all Knowledge Graph Brain capabilities as stand
 
 ### 🔗 Ready for Your Favorite AI Tools
 - **[Open WebUI](https://openwebui.com)**: Chat interface with knowledge graph superpowers
-- **[Claude Desktop](https://claude.ai/desktop)**: Claude with access to your private knowledge  
-- **[VS Code Extensions](https://marketplace.visualstudio.com/search?term=mcp)**: Code with intelligent context from your data
+- **[Claude Desktop](https://claude.ai/download)**: Claude with access to your private knowledge  
+- **VS Code with MCP**: Configure our MCP server with MCP-compatible extensions
 
 ### 🛠️ 16 Powerful Tools in 3 Categories
 
@@ -65,7 +65,7 @@ The Universal MCP Server exposes all Knowledge Graph Brain capabilities as stand
 cd mcp-server && npm install && npm run build
 
 # 2. Generate client configurations  
-npm run config  # Creates configs for Open WebUI, Claude Desktop, VS Code
+npm run config  # Creates configs for Open WebUI, Claude Desktop, MCP extensions
 
 # 3. Add to your favorite MCP client
 # Example: Open WebUI configuration generated in openWebUI-config.json
