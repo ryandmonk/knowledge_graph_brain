@@ -84,6 +84,34 @@ AI: Using ask_knowledge_graph tool...
 
 ---
 
+## 🎨 Web Setup Wizard **NEW** 
+
+**Visual setup replacing complex command-line configuration.**
+
+A modern React-based interface for system configuration and monitoring, eliminating the need for manual environment setup.
+
+### 🚀 Quick Start with Web UI
+```bash
+# 1. Start the orchestrator with demo mode
+cd orchestrator && DEMO_MODE=true npm run dev
+
+# 2. Open the setup wizard
+open http://localhost:3000/ui
+```
+
+### ✨ Features
+- **🔍 Real-time Health Monitoring**: Visual status of Neo4j, Ollama, and all connectors
+- **⚙️ Visual Configuration**: Point-and-click credential management for GitHub, Slack, Confluence
+- **🎭 Demo Mode**: Zero-configuration experience with realistic mock data for immediate testing
+- **📊 4-Step Setup**: Transform the complex README process into guided visual workflow
+
+### 🚧 Current Status
+The web UI provides essential setup and monitoring capabilities. Additional features (data exploration, advanced configuration) will be added in upcoming releases.
+
+**[👉 Try the Demo Mode Setup](http://localhost:3000/ui)** (requires orchestrator running)
+
+---
+
 ## 🏗️ Architecture
 
 ```
@@ -113,6 +141,17 @@ AI: Using ask_knowledge_graph tool...
 ---
 
 ## 🚀 Demo Walkthrough
+
+### Choose Your Setup Method
+
+**🎨 Option A: Web UI Setup (Easiest)** ⭐ **NEW**
+```bash
+cd orchestrator && DEMO_MODE=true npm run dev
+# Then visit: http://localhost:3000/ui for guided setup
+```
+
+**⌨️ Option B: Command Line Setup (Advanced)**
+Follow the detailed steps below for full manual configuration.
 
 ### Prerequisites
 - Node.js 18+  
@@ -384,7 +423,7 @@ Created by **Ryan Dombrowski**
 
 ## 📄 License
 
-MIT License – see LICENSE file  
+Apache License 2.0 – see LICENSE file  
 
 ## 🙋 Support
 

@@ -183,6 +183,122 @@ class SlackAPI {
   }
 }
 
+// Demo data for when DEMO_MODE is true or no SLACK_BOT_TOKEN is provided
+function getDemoSlackMessages() {
+  return [
+    {
+      id: 'msg-demo-1',
+      type: 'message',
+      title: 'Welcome to the Knowledge Graph project!',
+      content: 'Welcome to the Knowledge Graph project! We\'re building an exciting system that can connect data from multiple sources. Feel free to ask questions in #general if you need help getting started.',
+      text: 'Welcome to the Knowledge Graph project! We\'re building an exciting system that can connect data from multiple sources.',
+      timestamp: '2025-08-20T10:00:00Z',
+      created_at: '2025-08-20T10:00:00Z',
+      user_id: 'U001DEMO',
+      channel_id: 'C001GENERAL',
+      channel_name: 'general',
+      thread_ts: null,
+      reply_count: 3,
+      reactions: [{ name: 'wave', count: 5 }, { name: 'rocket', count: 2 }],
+      attachments: [],
+      files: [],
+      is_bot: false,
+      subtype: null,
+      permalink: 'https://demo-workspace.slack.com/archives/C001GENERAL/p1234567890'
+    },
+    {
+      id: 'msg-demo-2',
+      type: 'message',
+      title: 'Graph RAG implementation discussion',
+      content: 'I\'ve been researching Graph RAG implementations and found some interesting patterns. The key is to properly chunk documents while maintaining semantic relationships between entities.',
+      text: 'I\'ve been researching Graph RAG implementations and found some interesting patterns.',
+      timestamp: '2025-08-20T14:30:00Z',
+      created_at: '2025-08-20T14:30:00Z',
+      user_id: 'U002DEMO',
+      channel_id: 'C002TECH',
+      channel_name: 'tech-discussion',
+      thread_ts: null,
+      reply_count: 0,
+      reactions: [{ name: 'brain', count: 3 }, { name: '+1', count: 4 }],
+      attachments: [],
+      files: [],
+      is_bot: false,
+      subtype: null,
+      permalink: 'https://demo-workspace.slack.com/archives/C002TECH/p1234567891'
+    },
+    {
+      id: 'msg-demo-3',
+      type: 'message',
+      title: 'Demo data integration completed',
+      content: 'Great news! The demo data integration is working perfectly. We now have sample data from GitHub repos, Confluence pages, and Slack messages all connected in our knowledge graph.',
+      text: 'Great news! The demo data integration is working perfectly.',
+      timestamp: '2025-08-21T09:15:00Z',
+      created_at: '2025-08-21T09:15:00Z',
+      user_id: 'U003DEMO',
+      channel_id: 'C003UPDATES',
+      channel_name: 'project-updates',
+      thread_ts: null,
+      reply_count: 1,
+      reactions: [{ name: 'tada', count: 8 }, { name: 'fire', count: 3 }],
+      attachments: [],
+      files: [],
+      is_bot: false,
+      subtype: null,
+      permalink: 'https://demo-workspace.slack.com/archives/C003UPDATES/p1234567892'
+    }
+  ];
+}
+
+function getDemoSlackChannels() {
+  return [
+    {
+      id: 'C001GENERAL',
+      name: 'general',
+      is_channel: true,
+      is_private: false,
+      created: 1725120000,
+      creator: 'U001DEMO',
+      purpose: {
+        value: 'Company-wide announcements and general discussion'
+      },
+      topic: {
+        value: 'Welcome to our knowledge graph project workspace!'
+      },
+      num_members: 12
+    },
+    {
+      id: 'C002TECH',
+      name: 'tech-discussion',
+      is_channel: true,
+      is_private: false,
+      created: 1725120100,
+      creator: 'U002DEMO',
+      purpose: {
+        value: 'Technical discussions about implementation details'
+      },
+      topic: {
+        value: 'Graph RAG, Neo4j, embeddings, and more'
+      },
+      num_members: 8
+    },
+    {
+      id: 'C003UPDATES',
+      name: 'project-updates',
+      is_channel: true,
+      is_private: false,
+      created: 1725120200,
+      creator: 'U003DEMO',
+      purpose: {
+        value: 'Project status updates and milestones'
+      },
+      topic: {
+        value: 'Stay updated on our progress'
+      },
+      num_members: 15
+    }
+  ];
+}
+
 // Implement the pull capability as a tool
 server.registerTool('pull', 'Pull messages and data from Slack', {
   since: 'string',          // Optional parameter for incremental sync
@@ -319,7 +435,22 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
+  const { config } = require('./config.js');
+  
   try {
+    // In demo mode, skip API authentication
+    if (config.DEMO_MODE || !config.SLACK_BOT_TOKEN) {
+      return res.json({ 
+        status: 'healthy',
+        service: 'slack-connector',
+        timestamp: new Date().toISOString(),
+        mode: 'demo',
+        slack_team: 'demo-workspace',
+        slack_user: 'demo-bot',
+        bot_id: 'B001DEMO'
+      });
+    }
+    
     const api = new SlackAPI();
     const auth = await api.checkAuth();
     
@@ -327,6 +458,7 @@ app.get('/health', async (req, res) => {
       status: 'healthy',
       service: 'slack-connector',
       timestamp: new Date().toISOString(),
+      mode: 'production',
       slack_team: auth.team,
       slack_user: auth.user,
       bot_id: auth.bot_id
@@ -403,8 +535,47 @@ app.get('/sources', (req, res) => {
 
 // Simple pull endpoint for testing
 app.get('/pull', async (req, res) => {
+  const { config } = require('./config.js');
+  
   try {
     const { since, channels, include_threads, data_types } = req.query;
+    
+    // Check if we should use demo mode
+    if (config.DEMO_MODE || !config.SLACK_BOT_TOKEN) {
+      console.log('🎭 Slack: Using DEMO MODE - returning mock Slack data');
+      const demoMessages = getDemoSlackMessages();
+      const demoChannels = getDemoSlackChannels();
+      
+      const types = data_types ? data_types.split(',') : ['messages'];
+      let documents = [];
+      
+      if (types.includes('messages')) {
+        documents = [...demoMessages];
+      }
+      
+      if (types.includes('channels')) {
+        const channelDocs = demoChannels.map(channel => ({
+          id: `channel-${channel.id}`,
+          type: 'channel',
+          title: `#${channel.name}`,
+          description: channel.purpose?.value || channel.topic?.value || '',
+          content: channel.purpose?.value || channel.topic?.value || '',
+          name: channel.name,
+          channel_id: channel.id,
+          created_at: new Date(channel.created * 1000).toISOString(),
+          creator: channel.creator,
+          is_private: channel.is_private,
+          member_count: channel.num_members,
+          topic: channel.topic?.value,
+          purpose: channel.purpose?.value
+        }));
+        documents = [...documents, ...channelDocs];
+      }
+      
+      return res.json(documents);
+    }
+
+    console.log('🔐 Slack: Using PRODUCTION MODE - fetching real data from Slack API');
     
     const api = new SlackAPI();
     const auth = await api.checkAuth();

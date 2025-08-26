@@ -5,6 +5,133 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2025-08-26 - Phase 2: React Web UI & Demo Mode Ecosystem
+
+### Added
+- **🎨 Complete React Web Interface** - Modern, responsive setup wizard replacing 12-step CLI process
+  - **Setup Wizard Implementation**: Single-page React application with real-time service health monitoring
+    - Service health dashboard showing Neo4j, Ollama, and Orchestrator status
+    - Interactive refresh controls with loading states and error handling
+    - Professional UI design with Tailwind CSS styling and responsive layout
+    - Real-time health API integration with visual status indicators (🟢 Healthy, 🔴 Unhealthy)
+  
+  - **Production Build System**: Complete Vite-based build pipeline for optimized deployment
+    - TypeScript compilation with React 18 and JSX runtime
+    - Hot module replacement for development with automatic browser refresh
+    - Production builds with code splitting, minification, and asset optimization
+    - Proper asset path configuration for deployment under `/ui` subpath
+  
+  - **API Integration Framework**: Comprehensive REST API client with service communication
+    - Axios-based API client with error handling and retry logic
+    - Configuration endpoint (`/api/config`) for environment variable management
+    - Health monitoring endpoints for all system services
+    - Real-time status updates with automatic refresh capabilities
+
+- **🔧 Dynamic Credential Management System** - Complete production-ready credential configuration
+  - **Orchestrator API Enhancements**: New REST endpoints for connector configuration management
+    - `GET /api/connectors/:id/config` - Retrieve current connector credentials and port settings
+    - `POST /api/connectors/:id/config` - Update connector credentials with automatic .env file updates
+    - `GET /api/ports/status` - Port conflict detection and usage monitoring
+    - Dynamic .env file updates with proper error handling and validation
+  
+  - **React Configuration Modal**: Comprehensive credential management interface
+    - ConnectorConfigModal component with dynamic form generation per connector type
+    - Secure credential handling with password masking and validation
+    - Real-time connection testing and port conflict detection
+    - Integration with Step 3 of setup wizard for seamless workflow
+    - TypeScript support with proper interfaces and error handling
+  
+  - **Multi-Connector Support**: Production-ready credential management for all connectors
+    - GitHub: Personal Access Token and repository owner configuration
+    - Slack: Bot Token, App Token, and Signing Secret management
+    - Confluence: API key, domain, and user email configuration
+    - Extensible design supporting future connector additions
+
+- **🏗️ Modular Architecture Implementation**
+  - **Standalone `/web-ui` Package**: Independent React package with complete build system
+    - Separate package.json with React 18, TypeScript, Tailwind CSS, and Vite dependencies
+    - Component-based architecture with Layout, SetupWizard, and Dashboard components
+    - Utility modules for API communication and application configuration
+    - Professional development workflow with ESLint integration and proper TypeScript configuration
+  
+  - **Express Integration**: Static file serving integration with orchestrator
+    - Static file serving at `/ui` endpoint with proper MIME type handling
+    - Configuration API endpoints for web UI integration
+    - CORS support for development and production deployment
+    - Production-ready static asset serving with caching headers
+
+### Enhanced
+- **🚀 Developer Experience Improvements**
+  - **Hot Module Replacement**: Instant feedback during development with Vite's fast refresh
+  - **TypeScript Integration**: Full type safety with React component props and API interfaces
+  - **Component Library**: Reusable UI components with Tailwind CSS styling and responsive design
+  - **Professional Tooling**: ESLint configuration, proper import resolution, and build optimization
+
+- **🔧 System Integration**
+  - **Orchestrator Enhancement**: Added static file serving and configuration endpoints
+  - **Health Monitoring**: Real-time service health checking with comprehensive status reporting
+  - **Configuration Management**: Web-based environment variable management interface
+  - **Production Deployment**: Complete build pipeline for production-ready web interface
+
+- **🎭 Demo Mode Ecosystem** - Complete centralized demo data infrastructure for all connectors
+  - **Production-Safe Demo Data**: All connectors provide realistic mock data for safe testing and development
+    - GitHub Connector: 3 realistic repositories with full metadata, topics, languages, and commit history
+    - Slack Connector: 3 sample messages and channels with reactions, threads, user profiles, and workspace data
+    - Confluence Connector: 2 demo spaces and 3 comprehensive knowledge base pages with realistic technical content
+    - Retail-Mock Connector: Complete product catalog and customer data for e-commerce testing scenarios
+  
+  - **Centralized Demo Mode Control**: Environment variable management across all services
+    - `DEMO_MODE=true` enables coordinated mock data across all connectors simultaneously
+    - Graceful fallback to demo data when credentials are missing, invalid, or services are unreachable
+    - Clear visual indicators (🎭) in logs and health endpoints when demo mode is active
+  
+  - **Zero-Configuration Developer Experience**: Immediate functionality without credential setup
+    - All connectors work immediately for testing knowledge graph ingestion pipeline
+    - Realistic mock data enables full end-to-end validation of semantic search and graph queries
+    - Production deployment safety with `DEMO_MODE=false` disabling all mock data sources
+
+### Fixed
+- **🎯 UI/UX Issues Resolution**
+  - **Asset Path Configuration**: Fixed Vite base path configuration for proper deployment under `/ui` subpath
+  - **React Router Compatibility**: Resolved routing issues with static file serving by implementing single-page application architecture
+  - **Build System**: Fixed TypeScript compilation errors and ESLint warnings for production builds
+  - **Service Integration**: Resolved API communication issues between web UI and orchestrator services
+
+### Technical Improvements
+- **Frontend Architecture**: Modern React application with functional components, hooks, and TypeScript
+- **Build Performance**: Vite build system with fast compilation and hot module replacement
+- **Code Quality**: ESLint integration with React-specific rules and TypeScript support
+- **Deployment**: Production-ready build pipeline with asset optimization and proper serving configuration
+- **User Experience**: Professional interface design with loading states, error handling, and responsive layout
+
+### Validation Results
+- ✅ **Web Interface**: Complete setup wizard with real-time service health monitoring functional
+- ✅ **Build System**: Production builds generating optimized assets with proper TypeScript compilation
+- ✅ **API Integration**: All service health endpoints responding correctly with status data
+- ✅ **User Experience**: Professional UI design with interactive elements and responsive layout confirmed
+- ✅ **Development Workflow**: Hot module replacement and development server working with live reload
+- ✅ **Production Deployment**: Static file serving integrated with orchestrator for complete web interface
+- ✅ **Credential Management**: Dynamic connector configuration system fully operational
+- ✅ **Configuration API**: All connector configuration endpoints working with .env file updates
+- ✅ **Multi-Connector Support**: GitHub, Slack, and Confluence credential management validated
+- ✅ **Port Management**: Port conflict detection and dynamic configuration operational
+- ✅ **Demo Mode Implementation**: All 4 connectors (GitHub, Slack, Confluence, Retail-Mock) providing comprehensive mock data
+- ✅ **Demo Data Quality**: Realistic sample data with proper metadata, relationships, and content structure
+- ✅ **Production Safety**: Demo mode properly disabled in production environments with DEMO_MODE=false
+- ✅ **Zero-Config Experience**: Complete knowledge graph pipeline functional without any credential setup
+
+### Breaking Changes
+- **Web Interface Access**: Web UI now accessible at `http://localhost:3000/ui` instead of separate port
+- **Configuration Method**: Setup wizard provides web-based alternative to CLI configuration process
+
+### Migration Guide
+- **Web UI Access**: Navigate to `http://localhost:3000/ui` to access the new setup wizard
+- **Service Requirements**: Ensure Neo4j and Ollama services are running for full setup wizard functionality
+- **Development Setup**: Run `npm run dev` in `/web-ui` directory for development with hot reload
+
+### Impact
+This release transforms the user experience from a complex 12-step CLI setup process to a modern, intuitive web interface. The setup wizard provides real-time feedback on service status and guides users through system configuration with professional UI design and responsive layout. This significantly lowers the barrier to entry while maintaining all the power and flexibility of the underlying system.
+
 ## [0.11.0] - 2025-08-25 - Knowledge Graph Studio Platform - Phase 1: Universal MCP Server
 
 ### Added

@@ -79,8 +79,11 @@ start_service() {
     local service_name=$1
     local service_path=$2
     local port=$3
+    local original_dir=$(pwd)
     
     echo -e "${BLUE}📡 Starting ${service_name} (Port: ${port})...${NC}"
+    echo "   Current directory: $(pwd)"
+    echo "   Attempting to cd to: ${service_path}"
     cd ${service_path}
     
     # Install dependencies if needed
@@ -95,53 +98,60 @@ start_service() {
         npm run build > /dev/null 2>&1
     fi
     
+    # Ensure logs directory exists
+    mkdir -p "../logs"
+    
     # Start the service in background
     npm start > "../logs/${service_name}.log" 2>&1 &
     echo $! > "../logs/${service_name}.pid"
     
-    cd ..
+    cd "${original_dir}"
     echo -e "${GREEN}✅ ${service_name} starting...${NC}"
 }
 
-# Create logs directory
-mkdir -p logs
-
-# Start orchestrator
-start_service "Orchestrator" "orchestrator" "${ORCHESTRATOR_PORT:-3000}"
-
-# Start connectors
-start_service "GitHub-Connector" "connectors/github" "${GITHUB_CONNECTOR_PORT:-3002}"
-start_service "Slack-Connector" "connectors/slack" "${SLACK_CONNECTOR_PORT:-3003}"
-start_service "Confluence-Connector" "connectors/confluence" "${CONFLUENCE_CONNECTOR_PORT:-3004}"
-start_service "Retail-Mock-Connector" "connectors/retail-mock" "${RETAIL_CONNECTOR_PORT:-8081}"
-
-echo ""
-echo -e "${GREEN}✅ All services are starting up...${NC}"
-echo ""
-echo -e "${BLUE}🔍 Service URLs:${NC}"
-echo "   Orchestrator:          http://localhost:${ORCHESTRATOR_PORT:-3000}"
-echo "   GitHub Connector:      http://localhost:${GITHUB_CONNECTOR_PORT:-3002}" 
-echo "   Slack Connector:       http://localhost:${SLACK_CONNECTOR_PORT:-3003}"
-echo "   Confluence Connector:  http://localhost:${CONFLUENCE_CONNECTOR_PORT:-3004}"
-echo "   Retail Mock Connector: http://localhost:${RETAIL_CONNECTOR_PORT:-8081}"
-echo ""
-echo -e "${YELLOW}⏳ Services are starting... Check logs/ directory for detailed output${NC}"
-echo -e "${BLUE}🩺 Run 'curl http://localhost:${ORCHESTRATOR_PORT:-3000}/health' to check orchestrator status${NC}"
-echo ""
-echo -e "${YELLOW}📋 To stop all services: ./stop-services.sh${NC}"
-echo -e "${YELLOW}📋 To view logs: tail -f logs/*.log${NC}"
-
-# Wait a moment for services to start
-sleep 3
-
-echo ""
-echo -e "${BLUE}🎉 Knowledge Graph Brain is ready!${NC}"
-echo ""
-if [ "${DEMO_MODE:-true}" = "true" ]; then
-    echo -e "${YELLOW}🎭 Running in DEMO MODE with safe mock data${NC}"
-else
-    echo -e "${GREEN}🔐 Running in PRODUCTION MODE with real API connections${NC}"
-fi
+# Start services
+start_services() {
+    echo -e "${BLUE}🔧 Starting services...${NC}"
+    
+    # Create logs directory
+    mkdir -p logs
+    
+    # Start orchestrator
+    start_service "Orchestrator" "orchestrator" "${ORCHESTRATOR_PORT:-3000}"
+    
+    # Start connectors
+    start_service "GitHub-Connector" "connectors/github" "${GITHUB_CONNECTOR_PORT:-3001}"
+    start_service "Slack-Connector" "connectors/slack" "${SLACK_CONNECTOR_PORT:-3003}"
+    start_service "Confluence-Connector" "connectors/confluence" "${CONFLUENCE_CONNECTOR_PORT:-3004}"
+    start_service "Retail-Mock-Connector" "connectors/retail-mock" "${RETAIL_CONNECTOR_PORT:-8081}"
+    
+    echo ""
+    echo -e "${GREEN}✅ All services are starting up...${NC}"
+    echo ""
+    echo -e "${BLUE}🔍 Service URLs:${NC}"
+    echo "   Orchestrator:          http://localhost:${ORCHESTRATOR_PORT:-3000}"
+    echo "   GitHub Connector:      http://localhost:${GITHUB_CONNECTOR_PORT:-3001}" 
+    echo "   Slack Connector:       http://localhost:${SLACK_CONNECTOR_PORT:-3003}"
+    echo "   Confluence Connector:  http://localhost:${CONFLUENCE_CONNECTOR_PORT:-3004}"
+    echo "   Retail Mock Connector: http://localhost:${RETAIL_CONNECTOR_PORT:-8081}"
+    echo ""
+    echo -e "${YELLOW}⏳ Services are starting... Check logs/ directory for detailed output${NC}"
+    echo -e "${BLUE}🩺 Run 'curl http://localhost:${ORCHESTRATOR_PORT:-3000}/health' to check orchestrator status${NC}"
+    echo ""
+    echo -e "${YELLOW}📋 To stop all services: ./stop-services.sh${NC}"
+    echo -e "${YELLOW}📋 To view logs: tail -f logs/*.log${NC}"
+    
+    # Wait a moment for services to start
+    sleep 3
+    
+    echo ""
+    echo -e "${BLUE}🎉 Knowledge Graph Brain is ready!${NC}"
+    echo ""
+    if [ "${DEMO_MODE:-true}" = "true" ]; then
+        echo -e "${YELLOW}🎭 Running in DEMO MODE with safe mock data${NC}"
+    else
+        echo -e "${GREEN}🔐 Running in PRODUCTION MODE with real API connections${NC}"
+    fi
     
     # Check if Ollama is running
     if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
@@ -157,56 +167,6 @@ fi
         echo -e "${RED}❌ Ollama not running. Please start Ollama first.${NC}"
         exit 1
     fi
-    
-    echo ""
-}
-
-# Start services
-start_services() {
-    echo -e "${BLUE}🔧 Starting services...${NC}"
-    
-    # Build and start orchestrator
-    echo -e "${YELLOW}📦 Building and starting MCP Orchestrator...${NC}"
-    cd orchestrator
-    npm install > /dev/null 2>&1
-    npm run build > /dev/null 2>&1
-    npm start &
-    ORCHESTRATOR_PID=$!
-    cd ..
-    
-    # Wait a moment for orchestrator to start
-    sleep 3
-    
-    # Start Confluence connector
-    echo -e "${YELLOW}🔗 Starting Confluence Connector...${NC}"
-    cd connectors/confluence
-    npm install > /dev/null 2>&1
-    npm start &
-    CONNECTOR_PID=$!
-    cd ../..
-    
-    # Wait for services to be ready
-    echo -e "${BLUE}⏳ Waiting for services to be ready...${NC}"
-    sleep 5
-    
-    # Test service health
-    if curl -s http://localhost:3000/health > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ MCP Orchestrator ready at http://localhost:3000${NC}"
-    else
-        echo -e "${RED}❌ MCP Orchestrator failed to start${NC}"
-        cleanup
-        exit 1
-    fi
-    
-    if curl -s http://localhost:3001/pull > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ Confluence Connector ready at http://localhost:3001${NC}"
-    else
-        echo -e "${RED}❌ Confluence Connector failed to start${NC}"
-        cleanup
-        exit 1
-    fi
-    
-    echo ""
 }
 
 # Cleanup function
@@ -263,15 +223,18 @@ case "${1:-start}" in
         
         # Check each service
         services=(
-            "http://localhost:3000/health:MCP Orchestrator"
-            "http://localhost:3001/pull:Confluence Connector"
-            "http://localhost:7474:Neo4j"
-            "http://localhost:11434/api/tags:Ollama"
+            "http://localhost:3000/health|MCP Orchestrator"
+            "http://localhost:3001/pull|GitHub Connector"
+            "http://localhost:3003/pull|Slack Connector"
+            "http://localhost:3004/pull|Confluence Connector"
+            "http://localhost:8081/pull|Retail Mock Connector"
+            "http://localhost:7474|Neo4j"
+            "http://localhost:11434/api/tags|Ollama"
         )
         
         for service in "${services[@]}"; do
-            url=$(echo "$service" | cut -d: -f1,2)
-            name=$(echo "$service" | cut -d: -f3)
+            url=$(echo "$service" | cut -d'|' -f1)
+            name=$(echo "$service" | cut -d'|' -f2)
             
             if curl -s "$url" > /dev/null 2>&1; then
                 echo -e "${GREEN}✅ $name${NC}"

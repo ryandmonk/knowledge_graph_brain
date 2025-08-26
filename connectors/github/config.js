@@ -14,7 +14,7 @@ function getConfig() {
     DEMO_MODE: process.env.DEMO_MODE?.toLowerCase() === 'true',
     
     // Service Configuration
-    PORT: parseInt(process.env.GITHUB_CONNECTOR_PORT || '3002'),
+    PORT: parseInt(process.env.GITHUB_CONNECTOR_PORT || '3001'),
     
     // GitHub-specific auth
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,

@@ -140,18 +140,113 @@ class ConfluenceAPI {
   }
 }
 
+// Demo data for when DEMO_MODE is true or no credentials are provided
+function getDemoConfluencePages() {
+  return [
+    {
+      id: 'page-demo-1',
+      type: 'page',
+      title: 'Knowledge Graph Architecture',
+      content: 'This document outlines the architecture of our knowledge graph system. The system is built using Neo4j as the graph database, with multiple data connectors for ingesting information from various sources like GitHub, Slack, and Confluence.\n\n## Key Components\n\n1. **Graph Database**: Neo4j stores entities and relationships\n2. **Connectors**: Pull data from external sources\n3. **Orchestrator**: Manages the ingestion process\n4. **Web UI**: Provides user interface for configuration\n\n## Data Flow\n\nData flows from source systems through connectors into the graph database, where relationships are established between entities.',
+      space: {
+        key: 'DEMO',
+        name: 'Demo Knowledge Base'
+      },
+      author: {
+        displayName: 'Sarah Chen',
+        email: 'sarah@demo.com'
+      },
+      created_at: '2025-08-15T09:00:00Z',
+      updated_at: '2025-08-20T14:30:00Z',
+      status: 'current',
+      url: 'https://demo-confluence.atlassian.net/wiki/spaces/DEMO/pages/123456/Knowledge+Graph+Architecture'
+    },
+    {
+      id: 'page-demo-2',
+      type: 'page',
+      title: 'Graph RAG Implementation Guide',
+      content: 'Graph Retrieval-Augmented Generation (Graph RAG) combines the power of knowledge graphs with large language models to provide more accurate and contextual responses.\n\n## Implementation Steps\n\n1. **Data Ingestion**: Import structured and unstructured data into the graph\n2. **Entity Resolution**: Identify and merge duplicate entities\n3. **Relationship Extraction**: Discover connections between entities\n4. **Query Processing**: Convert natural language queries into graph queries\n5. **Response Generation**: Use retrieved context to generate responses\n\n## Benefits\n\n- More accurate information retrieval\n- Better understanding of entity relationships\n- Reduced hallucination in AI responses\n- Scalable knowledge representation',
+      space: {
+        key: 'DEMO',
+        name: 'Demo Knowledge Base'
+      },
+      author: {
+        displayName: 'Alex Rodriguez',
+        email: 'alex@demo.com'
+      },
+      created_at: '2025-08-18T11:15:00Z',
+      updated_at: '2025-08-21T16:45:00Z',
+      status: 'current',
+      url: 'https://demo-confluence.atlassian.net/wiki/spaces/DEMO/pages/789012/Graph+RAG+Implementation+Guide'
+    },
+    {
+      id: 'page-demo-3',
+      type: 'page',
+      title: 'Connector Configuration Best Practices',
+      content: 'This page contains best practices for configuring data connectors in our knowledge graph system.\n\n## Security Considerations\n\n- Use environment variables for API tokens\n- Implement proper credential rotation\n- Monitor API usage and rate limits\n- Use read-only permissions where possible\n\n## Performance Optimization\n\n- Implement incremental sync to avoid full data reloads\n- Use pagination for large datasets\n- Cache frequently accessed data\n- Monitor connector health and performance metrics\n\n## Demo Mode\n\nAll connectors support demo mode with mock data for testing and development purposes. This allows safe experimentation without affecting production systems.',
+      space: {
+        key: 'DEMO',
+        name: 'Demo Knowledge Base'
+      },
+      author: {
+        displayName: 'Maria Santos',
+        email: 'maria@demo.com'
+      },
+      created_at: '2025-08-19T13:20:00Z',
+      updated_at: '2025-08-22T10:10:00Z',
+      status: 'current',
+      url: 'https://demo-confluence.atlassian.net/wiki/spaces/DEMO/pages/345678/Connector+Configuration+Best+Practices'
+    }
+  ];
+}
+
+function getDemoConfluenceSpaces() {
+  return [
+    {
+      id: 'space-demo-1',
+      key: 'DEMO',
+      name: 'Demo Knowledge Base',
+      description: 'Sample Confluence space with demo content for knowledge graph testing',
+      type: 'global',
+      status: 'current',
+      created_at: '2025-08-01T00:00:00Z',
+      homepage: {
+        id: 'page-demo-1',
+        title: 'Knowledge Graph Architecture'
+      }
+    },
+    {
+      id: 'space-demo-2', 
+      key: 'TECH',
+      name: 'Technical Documentation',
+      description: 'Technical specifications and implementation details',
+      type: 'global',
+      status: 'current',
+      created_at: '2025-08-05T00:00:00Z',
+      homepage: {
+        id: 'page-demo-2',
+        title: 'Graph RAG Implementation Guide'
+      }
+    }
+  ];
+}
+
 const confluenceAPI = new ConfluenceAPI();
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
+  const { config } = require('./config.js');
+  
   try {
-    if (!CONFLUENCE_API_TOKEN || !CONFLUENCE_USER_EMAIL) {
+    // In demo mode, skip API authentication
+    if (config.DEMO_MODE || !CONFLUENCE_API_TOKEN || !CONFLUENCE_USER_EMAIL) {
       return res.json({
-        status: 'unhealthy',
+        status: 'healthy',
         service: 'confluence-connector',
-        error: 'Confluence authentication not configured',
         timestamp: new Date().toISOString(),
-        message: 'Set CONFLUENCE_BASE_URL, CONFLUENCE_API_TOKEN, and CONFLUENCE_USER_EMAIL environment variables'
+        mode: 'demo',
+        baseUrl: 'https://demo-confluence.atlassian.net',
+        message: config.DEMO_MODE ? 'Using demo data' : 'Authentication not configured - using demo data'
       });
     }
 
@@ -162,6 +257,7 @@ app.get('/health', async (req, res) => {
       status: 'healthy',
       service: 'confluence-connector',
       timestamp: new Date().toISOString(),
+      mode: 'production',
       baseUrl: CONFLUENCE_BASE_URL,
     });
   } catch (error) {
@@ -212,8 +308,61 @@ app.get('/sources', (req, res) => {
 
 // Main data extraction endpoint
 app.get('/pull', async (req, res) => {
+  const { config } = require('./config.js');
+  
   try {
     const { data_types = 'pages', space_id, limit = 50, cursor } = req.query;
+    
+    // Check if we should use demo mode
+    if (config.DEMO_MODE || !CONFLUENCE_API_TOKEN || !CONFLUENCE_USER_EMAIL) {
+      console.log('🎭 Confluence: Using DEMO MODE - returning mock Confluence data');
+      
+      const types = data_types.split(',').map(t => t.trim());
+      const results = [];
+      
+      for (const type of types) {
+        switch (type) {
+          case 'spaces':
+            const demoSpaces = getDemoConfluenceSpaces();
+            results.push(...demoSpaces.map(space => ({
+              id: space.id,
+              title: space.name,
+              content: `${space.name}\n${space.description || ''}`,
+              description: space.description || '',
+              url: `https://demo-confluence.atlassian.net/wiki/spaces/${space.key}`,
+              type: 'space',
+              key: space.key,
+              status: space.status,
+              created_at: space.created_at,
+            })));
+            break;
+            
+          case 'pages':
+          default:
+            const demoPages = getDemoConfluencePages();
+            results.push(...demoPages.map(page => ({
+              id: page.id,
+              title: page.title,
+              content: page.content,
+              description: page.title,
+              url: page.url,
+              type: 'page',
+              space_key: page.space.key,
+              space_name: page.space.name,
+              status: page.status,
+              created_at: page.created_at,
+              updated_at: page.updated_at,
+              author_name: page.author.displayName,
+              author_email: page.author.email
+            })));
+            break;
+        }
+      }
+      
+      return res.json(results);
+    }
+
+    console.log('🔐 Confluence: Using PRODUCTION MODE - fetching real data from Confluence API');
     
     const types = data_types.split(',').map(t => t.trim());
     const results = [];
