@@ -32,6 +32,32 @@ An MCP-based orchestrator that ingests data from multiple sources, maps them thr
 
 The Universal MCP Server exposes all Knowledge Graph Brain capabilities as standard MCP tools, enabling seamless integration with popular AI interfaces:
 
+### 🌐 OpenAPI/REST Integration **LATEST** ⭐
+
+**Convert MCP tools to standard REST API for universal compatibility:**
+
+```bash
+# Start OpenAPI proxy (requires Python 3.11+)
+cd mcp-server && npm run build
+../.venv/bin/mcpo --port 8080 -- node ./dist/index.js
+
+# All 16 tools now available as REST endpoints
+curl -X POST "http://localhost:8080/ask_knowledge_graph" \
+     -H "Content-Type: application/json" \
+     -d '{"question": "What data do we have?"}'
+
+# Interactive API documentation at:
+open http://localhost:8080/docs
+```
+
+**Benefits:**
+- ✅ **Open WebUI Integration**: Zero-configuration setup with auto-discovery
+- ✅ **Universal Compatibility**: Works with any OpenAPI-compatible application  
+- ✅ **Interactive Docs**: Swagger UI for testing and exploration
+- ✅ **Production Ready**: Built-in authentication, CORS, and monitoring
+
+**[👉 Complete OpenAPI Integration Guide](./docs/openapi-integration.md)**
+
 ### 🔗 Ready for Your Favorite AI Tools
 - **[Open WebUI](https://openwebui.com)**: Chat interface with knowledge graph superpowers
 - **[Claude Desktop](https://claude.ai/download)**: Claude with access to your private knowledge  

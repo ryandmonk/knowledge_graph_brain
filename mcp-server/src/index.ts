@@ -8,6 +8,7 @@ import { SessionManager, MCPServerConfig } from './config.js';
 import { KnowledgeQueryTools } from './tools/knowledge-query.js';
 import { KnowledgeManagementTools } from './tools/knowledge-management.js';
 import { DiscoveryTools } from './tools/discovery.js';
+import { convertToolForMCP, MCPToolDefinition } from './utils/schema.js';
 
 /**
  * Universal MCP Server for Knowledge Graph Brain
@@ -63,19 +64,22 @@ export class UniversalMCPServer {
   }
 
   private registerTool(toolDef: any) {
+    // Convert Zod object schema to MCP SDK format
+    const mcpTool = convertToolForMCP(toolDef);
+    
     this.server.registerTool(
-      toolDef.name,
+      mcpTool.name,
       {
-        description: toolDef.description,
-        inputSchema: toolDef.inputSchema,
+        description: mcpTool.description,
+        inputSchema: mcpTool.inputSchema,
       },
       async (args: any) => {
         try {
           // Generate session ID from request context
           const sessionId = this.generateSessionId();
           
-          // Call the tool handler
-          const result = await toolDef.handler(args, sessionId);
+          // Call the tool handler - MCP SDK handles validation
+          const result = await mcpTool.handler(args, sessionId);
           
           return {
             content: [
@@ -86,7 +90,7 @@ export class UniversalMCPServer {
             ],
           };
         } catch (error) {
-          console.error(`Error in tool ${toolDef.name}:`, error);
+          console.error(`Error in tool ${mcpTool.name}:`, error);
           
           return {
             content: [

@@ -2,6 +2,8 @@
 
 Universal Model Context Protocol (MCP) server that exposes all Knowledge Graph Brain capabilities as tools for external clients like Open WebUI, Claude Desktop, VS Code extensions, and other MCP-compatible applications.
 
+**🌐 NEW: OpenAPI/REST Integration** - Transform MCP tools into standard REST endpoints using the `mcpo` proxy for universal compatibility with any HTTP client.
+
 ## Features
 
 ### 🔍 Knowledge Query Tools
@@ -23,6 +25,70 @@ Universal Model Context Protocol (MCP) server that exposes all Knowledge Graph B
 - **explore_schema**: Analyze graph structure and entity types
 - **find_patterns**: Discover interesting patterns in the data
 - **get_session_info**: View session context and query history
+
+## Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Start the MCP server
+npm start
+```
+
+## 🌐 OpenAPI/REST Integration **NEW**
+
+Convert all MCP tools to standard REST endpoints for universal compatibility:
+
+### Quick Start with OpenAPI
+```bash
+# Prerequisites: Python 3.11+ and mcpo installed
+pip install mcpo
+
+# Build MCP server
+npm run build
+
+# Start OpenAPI proxy (combines proxy + MCP server)
+../.venv/bin/mcpo --port 8080 -- node ./dist/index.js
+
+# Access interactive documentation
+open http://localhost:8080/docs
+```
+
+### Available REST Endpoints
+All 16 MCP tools become POST endpoints:
+- `POST /ask_knowledge_graph` - Natural language Q&A
+- `POST /list_knowledge_bases` - List available KBs  
+- `POST /search_semantic` - Vector similarity search
+- `POST /switch_knowledge_base` - Change context
+- And 12 more tools...
+
+### Example Usage
+```bash
+# List knowledge bases
+curl -X POST "http://localhost:8080/list_knowledge_bases" \
+     -H "Content-Type: application/json" \
+     -d '{"include_stats": true}'
+
+# Ask a question
+curl -X POST "http://localhost:8080/ask_knowledge_graph" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "question": "What are the main components of our system?",
+       "search_depth": "deep"
+     }'
+```
+
+### Open WebUI Integration
+1. Start the OpenAPI proxy as shown above
+2. In Open WebUI, configure API endpoint: `http://localhost:8080`
+3. Open WebUI automatically discovers all 16 tools
+4. Use natural language: *"List all knowledge bases"*
+
+**[👉 Complete OpenAPI Integration Guide](../docs/openapi-integration.md)**
 
 ## Installation
 

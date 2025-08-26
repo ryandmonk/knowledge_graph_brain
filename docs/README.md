@@ -17,6 +17,7 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 - **[DSL Reference](./dsl.md)** - YAML schema language specification with validation and best practices
 
 ### 🔌 Integration & Development  
+- **[OpenAPI/REST Integration](./openapi-integration.md)** - ⭐ **Universal HTTP client integration** with auto-generated docs (v0.13.0)
 - **[Connectors Guide](./connectors.md)** - Data source integration patterns and connector development
 - **[GraphRAG Implementation](./graphrag.md)** - Advanced graph-enhanced RAG with LangGraph agents
 - **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment for Docker, Kubernetes, and enterprise environments
@@ -43,6 +44,12 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 1. Review [Connectors Guide](./connectors.md) for available connectors
 2. Use [API Reference](./API.md) for orchestrator endpoints
 3. Test with [CLI Tools](./cli.md) status monitoring
+
+**Integrate with Applications**
+1. Use [OpenAPI/REST Integration](./openapi-integration.md) for universal compatibility (Open WebUI, web apps)
+2. Or use [MCP Server Guide](../mcp-server/README.md) for direct MCP client integration
+3. Check [API Reference](./API.md) for endpoint documentation
+4. Test with [CLI Tools](./cli.md) connectivity validation
 
 **Deploy to Production**
 1. Follow [Deployment Guide](./DEPLOYMENT.md) for your environment

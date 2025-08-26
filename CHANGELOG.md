@@ -5,6 +5,64 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2025-08-26 - Universal OpenAPI Integration
+
+### Added
+- **🌐 Complete OpenAPI/REST API Integration** - Transform MCP tools into standard REST endpoints
+  - **mcpo Proxy Integration**: Universal MCP-to-OpenAPI conversion using industry-standard `mcpo` package
+  - **Auto-Generated OpenAPI Documentation**: Interactive Swagger UI at `/docs` with complete API reference
+  - **16 REST Endpoints**: All knowledge graph tools accessible via standard HTTP POST requests
+  - **Zero-Configuration Open WebUI Integration**: Automatic tool discovery and integration
+
+- **📚 Comprehensive OpenAPI Documentation**
+  - **Complete Integration Guide**: `/docs/openapi-integration.md` with setup, deployment, and troubleshooting
+  - **Production Deployment Patterns**: Docker, Kubernetes, and Nginx configuration examples
+  - **Authentication & Security**: API key authentication and CORS configuration
+  - **Client Integration Examples**: JavaScript, Python, and curl examples
+
+### Enhanced
+- **🔧 MCP Schema Compatibility Resolution**
+  - **Schema Format Conversion**: Fixed MCP SDK compatibility by converting Zod object schemas to property-based format
+  - **Tool Registration Enhancement**: Proper schema conversion utilities for seamless MCP protocol compliance
+  - **Error Handling Improvement**: Comprehensive error responses with diagnostic information
+
+- **🚀 External Integration Capabilities**
+  - **Universal Client Support**: Compatible with Open WebUI, Postman, and any OpenAPI-compatible application
+  - **Interactive Testing**: Built-in Swagger UI for real-time API testing and exploration
+  - **Type Safety**: Auto-generated OpenAPI schema ensures proper request/response validation
+
+### Technical Improvements
+- **MCP Protocol Compliance**: Full Model Context Protocol v1.0 compliance with proper tool registration
+- **Session Management**: Maintained session context across REST API calls through mcpo proxy
+- **Performance Optimization**: Efficient proxy layer with minimal overhead for production deployments
+- **Documentation Architecture**: Clear separation between MCP server docs and OpenAPI integration guides
+
+### Validation Results
+- ✅ **OpenAPI Integration**: All 16 knowledge graph tools accessible via REST endpoints
+- ✅ **Interactive Documentation**: Swagger UI operational at `http://localhost:8080/docs`
+- ✅ **Open WebUI Compatibility**: Zero-configuration integration with automatic tool discovery
+- ✅ **Production Readiness**: Authentication, CORS, monitoring, and deployment patterns validated
+- ✅ **Schema Conversion**: MCP SDK compatibility issues resolved with proper schema format
+- ✅ **End-to-End Testing**: Complete workflow from REST API calls to knowledge graph responses
+
+### Breaking Changes
+- **MCP Schema Format**: Internal tool definitions now use property-based schemas (backward compatible)
+- **OpenAPI Deployment**: New deployment option requiring Python 3.11+ for mcpo proxy
+
+### Migration Guide
+- **OpenAPI Setup**: Install mcpo (`pip install mcpo`) and start proxy as documented
+- **Existing MCP Clients**: No changes required - all existing MCP integrations continue to work
+- **Open WebUI Integration**: Use new OpenAPI endpoints instead of direct MCP configuration
+
+### Documentation Updates
+- **Main README**: Updated with OpenAPI integration section and quick start guide
+- **New Documentation**: Complete `/docs/openapi-integration.md` with comprehensive setup and deployment guide
+- **MCP Server README**: Enhanced with OpenAPI integration details and usage examples
+- **API Documentation**: Clear distinction between internal MCP API and external OpenAPI interface
+
+### Impact
+This release enables universal integration with any REST API compatible application, significantly expanding the accessibility of Knowledge Graph Brain capabilities. Open WebUI users can now connect with zero configuration, while developers can integrate with standard HTTP clients. The auto-generated OpenAPI documentation provides a professional API experience comparable to enterprise SaaS platforms.
+
 ## [0.12.0] - 2025-08-26 - Phase 2: React Web UI & Demo Mode Ecosystem
 
 ### Added

@@ -21,22 +21,66 @@ Knowledge Graph Brain exposes multiple API interfaces for different use cases.
                        └──────────────────┘    └─────────────────┘
                                 │                        │
                        ┌──────────────────┐    ┌─────────────────┐
-                       │   Ollama Service │    │ External Clients│
-                       │ • Local LLM      │    │ • Open WebUI    │
-                       │ • Embeddings     │    │ • Claude Desktop│
-                       │ • No External API│    │ • VS Code Ext   │
+                       │   Ollama Service │    │ OpenAPI Proxy   │
+                       │ • Local LLM      │    │ • mcpo Bridge   │
+                       │ • Embeddings     │    │ • REST/HTTP     │
+                       │ • No External API│    │ • Swagger Docs  │
+                       └──────────────────┘    └─────────────────┘
+                                │                        │
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │ Knowledge Graph  │    │ External Clients│
+                       │ • Neo4j + Vector │    │ • Open WebUI    │ 
+                       │ • Graph + Embed  │    │ • REST Apps     │
+                       │ • Multi-tenant   │    │ • Postman/curl  │
                        └──────────────────┘    └─────────────────┘
 ```
 
 ### API Layer Overview
 
-Knowledge Graph Brain provides three complementary API interfaces:
+Knowledge Graph Brain provides four complementary API interfaces:
 
-1. **Universal MCP Server** (NEW in v0.11.0) - External client integration via Model Context Protocol
-2. **MCP API** - Internal MCP interface for direct agent communication  
-3. **REST API** - HTTP interface for web applications and integrations
+1. **🌐 OpenAPI/REST** (NEW in v0.13.0) - Universal HTTP interface via mcpo proxy for maximum compatibility
+2. **🔌 Universal MCP Server** (v0.11.0) - External client integration via Model Context Protocol
+3. **📡 Internal MCP API** - Direct agent communication within the Knowledge Graph Brain ecosystem
+4. **🌐 REST API** - Direct HTTP interface for web applications and custom integrations
 
-### Universal MCP Server (v0.11.0+)
+### 🌐 OpenAPI/REST Interface (v0.13.0+) **RECOMMENDED FOR NEW INTEGRATIONS**
+
+**Purpose**: Universal REST API generated from MCP tools via mcpo proxy for maximum compatibility.
+
+**Best For**: 
+- Open WebUI integration
+- Custom web applications  
+- Mobile apps and SPAs
+- API testing with Postman
+- Any HTTP-capable client
+
+**Key Features**:
+- ✅ **Auto-Generated Endpoints**: All 16 MCP tools as POST endpoints
+- ✅ **Interactive Documentation**: Swagger UI at `/docs`
+- ✅ **Type Safety**: OpenAPI schema validation
+- ✅ **Production Ready**: Authentication, CORS, monitoring
+- ✅ **Zero Configuration**: Open WebUI auto-discovers tools
+
+**Quick Start**:
+```bash
+# Start OpenAPI proxy
+cd mcp-server && ../.venv/bin/mcpo --port 8080 -- node ./dist/index.js
+
+# Interactive docs at: http://localhost:8080/docs
+# All tools available as: POST http://localhost:8080/{tool_name}
+```
+
+**Example**:
+```bash
+curl -X POST "http://localhost:8080/ask_knowledge_graph" \
+     -H "Content-Type: application/json" \
+     -d '{"question": "What data do we have?", "search_depth": "deep"}'
+```
+
+**[👉 Complete OpenAPI Integration Guide](./openapi-integration.md)**
+
+### 🔌 Universal MCP Server (v0.11.0+)
 
 **Purpose**: Standalone MCP server exposing all Knowledge Graph Brain capabilities as MCP tools for external clients.
 
@@ -56,11 +100,11 @@ Knowledge Graph Brain provides three complementary API interfaces:
 - Internal MCP API: Direct agent-to-orchestrator communication
 - Universal MCP Server: External-client-to-orchestrator bridge with session management
 
-## MCP (Model Context Protocol) API - Internal
+### 📡 Internal MCP API
 
-The internal MCP interface for direct AI agent and orchestrator communication.
+The internal MCP interface for direct AI agent and orchestrator communication within the Knowledge Graph Brain ecosystem.
 
-> **Note**: For external MCP client integration (Open WebUI, Claude Desktop, etc.), use the [Universal MCP Server](../mcp-server/README.md) instead. This internal MCP API is designed for direct agent-to-orchestrator communication within the Knowledge Graph Brain ecosystem.
+> **Note**: For external client integration, prefer the **OpenAPI/REST interface** (easier) or **Universal MCP Server** (MCP protocol). This internal MCP API is designed for system-internal agent communication.
 
 ### Endpoint
 ```
@@ -594,12 +638,19 @@ ws.onmessage = (event) => {
 
 ## Related Documentation
 
-### Universal MCP Server (v0.11.0+)
-For external MCP client integration with Open WebUI, Claude Desktop, VS Code extensions, and other MCP-compatible applications:
+### 🌐 OpenAPI/REST Integration (v0.13.0+) **RECOMMENDED**
+For universal HTTP client integration with automatic OpenAPI documentation:
+
+- **[Complete OpenAPI Integration Guide](./openapi-integration.md)** - Setup, deployment, and client integration
+- **[Production Deployment Patterns](./openapi-integration.md#production-deployment)** - Docker, Kubernetes, authentication
+- **[Open WebUI Setup](./openapi-integration.md#open-webui-setup)** - Zero-configuration integration guide
+
+### 🔌 Universal MCP Server (v0.11.0+)
+For direct MCP client integration:
 
 - **[Universal MCP Server Documentation](../mcp-server/README.md)** - Complete setup and usage guide
-- **[Integration Examples](../mcp-server/README.md#client-integration)** - Configuration for popular MCP clients
-- **[16 MCP Tools Reference](../mcp-server/README.md#available-tools)** - Complete tool documentation
+- **[MCP Integration Examples](../mcp-server/README.md#usage-with-external-clients)** - Configuration for popular MCP clients
+- **[16 MCP Tools Reference](../mcp-server/README.md#features)** - Complete tool documentation
 
 ### System Documentation
 - **[Architecture Overview](./ARCHITECTURE.md)** - Complete system design and component interactions
