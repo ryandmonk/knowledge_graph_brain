@@ -90,13 +90,51 @@ export interface OllamaModelsResponse {
   ollama_url: string;
 }
 
+// GraphRAG Interfaces
+export interface Citation {
+  node_id: string;
+  node_type: string[];
+  relevance_score?: number;
+  source_data: any;
+  supporting_evidence: string;
+  confidence: number;
+}
+
+export interface ProvenanceStep {
+  step: number;
+  action: string;
+  tool_used: string;
+  query_executed: string;
+  results_found: number;
+  key_findings: string[];
+}
+
+export interface ConfidenceBreakdown {
+  overall_confidence: number;
+  semantic_confidence: number;
+  graph_confidence: number;
+  synthesis_confidence: number;
+  reasoning: string;
+}
+
+export interface GraphRAGResponse {
+  success: boolean;
+  question: string;
+  kb_id: string;
+  answer: string;
+  citations: Citation[];
+  provenance_chain: ProvenanceStep[];
+  confidence_breakdown: ConfidenceBreakdown;
+  timestamp: string;
+}
+
 class KnowledgeGraphAPI {
   private client: AxiosInstance;
 
   constructor(baseURL: string = 'http://localhost:3000') {
     this.client = axios.create({
       baseURL,
-      timeout: 30000,
+      timeout: 60000, // 60 seconds for general requests
       headers: {
         'Content-Type': 'application/json',
       },
@@ -125,6 +163,17 @@ class KnowledgeGraphAPI {
 
   async getSystemStatus(): Promise<SystemStatus> {
     const response = await this.client.get('/api/status');
+    return response.data;
+  }
+
+  async askQuestion(question: string, kb_id: string = 'retail-demo'): Promise<GraphRAGResponse> {
+    // GraphRAG queries can take longer than normal requests (up to 2 minutes)
+    const response = await this.client.post('/api/ask', {
+      question,
+      kb_id
+    }, {
+      timeout: 120000 // 2 minutes for GraphRAG processing
+    });
     return response.data;
   }
 

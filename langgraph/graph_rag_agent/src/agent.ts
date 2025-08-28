@@ -428,6 +428,8 @@ Example citation format: "According to [node-123], the title is 'Example Documen
   private estimateTokens(text: string): number {
     return Math.ceil(text.length / 4); // Rough estimation
   }
+  
+  async answerWithSteps(question: string, kb_id: string = 'confluence-kb'): Promise<{
     answer: string;
     steps: Array<{ step: string; tool: string; result: any }>;
   }> {

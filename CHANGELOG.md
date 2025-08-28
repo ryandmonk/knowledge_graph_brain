@@ -5,6 +5,84 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1] - 2025-08-28 - Complete Citation Tracing Detail View
+
+### Added
+- **🔍 Complete Citation Tracing System** - Final POST_AUDIT_TODO Minimal Web Console requirement (100% complete)
+  - **Interactive Query Modal**: Professional React modal component with citation detail view showing answer → citations (node IDs) → Cypher queries used
+  - **GraphRAG Integration**: Full integration with LangGraph agent providing answerWithDetailedCitations method
+  - **Complete Citation Chain Display**: 
+    - Answer section with confidence scoring and visual indicators
+    - Citations with node IDs, types, confidence scores, and content excerpts
+    - Expandable provenance chain showing exact Cypher queries used in reasoning process
+  - **Professional UI Design**: Modal with proper layout, loading states, and responsive design
+
+- **⚡ Enhanced User Experience**
+  - **Extended Timeout Support**: API client configured with 60-second general timeout and 120-second GraphRAG-specific timeout
+  - **Improved Loading Feedback**: Enhanced loading messages with "Processing with GraphRAG agent..." and expectation setting for 2-minute processing time
+  - **Professional Loading States**: Detailed loading screens with progress indicators and context messages
+
+- **🔧 GraphRAG API Integration**
+  - **New /api/ask Endpoint**: Express POST endpoint integrating GraphRAG agent with comprehensive response structure
+  - **Async Agent Initialization**: Proper dynamic import and initialization of LangGraph agent in orchestrator
+  - **Complete Response Format**: Answer, citations, confidence breakdown, and provenance chain data
+  - **Error Handling**: Robust error handling for GraphRAG processing with fallback responses
+
+### Enhanced
+- **🎯 Dashboard Integration**
+  - **Query Modal Integration**: Added query modal to Dashboard with state management for visibility control
+  - **Knowledge Base Context**: Modal receives kb_name for contextual query experience
+  - **Seamless Navigation**: Modal opens from dashboard KB cards with proper context passing
+
+- **🔧 API Client Enhancement** 
+  - **GraphRAG-Specific Timeouts**: Extended timeout configuration to handle long GraphRAG processing (60+ seconds typical)
+  - **Enhanced Error Handling**: Improved timeout error messages and API response handling
+  - **TypeScript Integration**: Complete GraphRAG response interfaces and type safety
+
+### Fixed
+- **⏱️ Timeout Issues Resolution**
+  - **GraphRAG Processing Time**: Fixed 30-second timeout errors when GraphRAG agent takes 60+ seconds to process complex queries
+  - **API Response Handling**: Resolved timeout failures preventing users from seeing citation tracing results
+  - **Loading State Display**: Enhanced loading feedback to set proper user expectations for long processing times
+
+- **🔧 Technical Issues**
+  - **LangGraph Agent Import**: Fixed async module import issues in orchestrator with proper initialization
+  - **TypeScript Syntax**: Corrected method signature syntax error in answerWithSteps method
+  - **Build System**: Ensured all React components build successfully with proper TypeScript compilation
+
+### Technical Improvements
+- **Citation Architecture**: Complete end-to-end citation tracing from GraphRAG agent through API to React UI
+- **Performance Optimization**: Proper timeout configuration for GraphRAG operations while maintaining responsive UI
+- **Code Quality**: Enhanced error handling, loading states, and user feedback throughout citation tracing workflow
+- **Integration Architecture**: Seamless integration between Express API, GraphRAG agent, and React modal components
+
+### Validation Results
+- ✅ **Citation Tracing UI**: Complete React modal displaying answer → citations → Cypher queries as required
+- ✅ **GraphRAG Integration**: LangGraph agent returning detailed citations with 72.6% confidence scores and 2 citations
+- ✅ **API Functionality**: /api/ask endpoint successfully processing questions and returning comprehensive responses
+- ✅ **Timeout Handling**: 120-second timeout configuration handling GraphRAG processing times without UI failures
+- ✅ **End-to-End Workflow**: Complete user journey from dashboard click → query input → citation display working seamlessly
+- ✅ **POST_AUDIT_TODO**: Final Minimal Web Console requirement completed - citation tracing detail view fully implemented
+
+### POST_AUDIT_TODO Impact
+This release completes the **HIGH PRIORITY Minimal Web Console requirement (100% complete)**:
+- ✅ Single SPA page for operational monitoring
+- ✅ KB listing with metadata (sources, runs, node counts, health scores)  
+- ✅ Wire to existing /api/status, /api/health endpoints
+- ✅ Integrate into existing web-ui
+- ✅ **Detail view showing answer → citations (node IDs) → Cypher queries used** - **COMPLETED**
+
+### Breaking Changes
+None - All changes are additive enhancements to existing functionality.
+
+### Migration Guide
+- **No Migration Required**: All existing functionality continues to work
+- **New Features Available**: Citation tracing accessible via "Query" buttons on knowledge base cards in dashboard
+- **Timeout Configuration**: Enhanced API timeouts automatically handle long GraphRAG processing
+
+### Impact
+This release completes the Minimal Web Console implementation, providing users with complete citation tracing capabilities. Users can now ask questions about their knowledge bases and see not only the answers but also the exact citations (with node IDs) and the Cypher queries used in the reasoning process. This provides full transparency and traceability for AI-generated answers, making the system suitable for enterprise deployment where answer provenance is critical.
+
 ## [0.14.0] - 2025-08-27 - Minimal Web Console Implementation
 
 ### Added

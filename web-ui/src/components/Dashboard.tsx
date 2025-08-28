@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { api, type SystemStatus } from '../utils/api';
+import { QueryModal } from './QueryModal';
 
 export function Dashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [queryModal, setQueryModal] = useState<{ isOpen: boolean; kb_id: string; kb_name: string }>({
+    isOpen: false,
+    kb_id: '',
+    kb_name: ''
+  });
 
   useEffect(() => {
     loadSystemStatus();
@@ -299,7 +305,14 @@ export function Dashboard() {
                     {/* KB Actions */}
                     <div className="border-t border-gray-100 pt-4 mt-4">
                       <div className="flex space-x-3">
-                        <button className="btn-primary text-sm">
+                        <button 
+                          className="btn-primary text-sm"
+                          onClick={() => setQueryModal({
+                            isOpen: true,
+                            kb_id: kb.kb_id,
+                            kb_name: kb.kb_id
+                          })}
+                        >
                           Query Knowledge Base
                         </button>
                         <button className="btn-secondary text-sm">
@@ -317,6 +330,14 @@ export function Dashboard() {
           </div>
         </>
       )}
+      
+      {/* Query Modal */}
+      <QueryModal
+        isOpen={queryModal.isOpen}
+        onClose={() => setQueryModal({ isOpen: false, kb_id: '', kb_name: '' })}
+        kb_id={queryModal.kb_id}
+        kb_name={queryModal.kb_name}
+      />
     </div>
   );
 }

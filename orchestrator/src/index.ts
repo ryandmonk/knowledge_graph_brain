@@ -13,6 +13,25 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 
+// GraphRAG Agent Integration
+let GraphRAGAgent: any;
+let createGraphRAGAgent: any;
+
+async function initializeGraphRAGAgent() {
+  try {
+    // Use dynamic import for ES modules
+    const graphragModule = await import('../../langgraph/graph_rag_agent/dist/agent.js');
+    GraphRAGAgent = graphragModule.GraphRAGAgent;
+    createGraphRAGAgent = graphragModule.createGraphRAGAgent;
+    console.log('✅ GraphRAG agent loaded successfully');
+  } catch (error) {
+    console.warn('⚠️ GraphRAG agent not available:', (error as Error).message);
+  }
+}
+
+// Initialize GraphRAG agent asynchronously
+initializeGraphRAGAgent();
+
 // Initialize Neo4j driver
 initDriver();
 
@@ -1055,6 +1074,47 @@ app.get('/api/query/:kb_id', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Query error:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// GraphRAG Ask API - Citation Tracing Detail View
+app.post('/api/ask', async (req: Request, res: Response) => {
+  try {
+    const { question, kb_id = 'retail-demo' } = req.body;
+    
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
+    
+    if (!createGraphRAGAgent) {
+      return res.status(503).json({ 
+        error: 'GraphRAG agent not available. Please ensure LangGraph dependencies are installed.' 
+      });
+    }
+    
+    // Create GraphRAG agent instance
+    const agent = await createGraphRAGAgent('http://localhost:3000');
+    
+    // Get detailed answer with citations and provenance
+    const result = await agent.answerWithDetailedCitations(question, kb_id);
+    
+    res.json({
+      success: true,
+      question,
+      kb_id,
+      answer: result.answer,
+      citations: result.citations,
+      provenance_chain: result.provenance_chain,
+      confidence_breakdown: result.confidence_breakdown,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('GraphRAG Ask error:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Failed to process question',
+      details: error instanceof Error ? error.stack : undefined
+    });
   }
 });
 
