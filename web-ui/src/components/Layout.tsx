@@ -1,10 +1,13 @@
 import { ReactNode } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const location = useLocation();
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -19,9 +22,33 @@ export function Layout({ children }: LayoutProps) {
                 Knowledge Graph Brain
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">v1.0.0</span>
-            </div>
+            
+            {/* Navigation Menu */}
+            <nav className="flex items-center space-x-6">
+              <Link 
+                to="/setup"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/setup' 
+                    ? 'text-primary-600' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Setup
+              </Link>
+              <Link 
+                to="/dashboard"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/dashboard' 
+                    ? 'text-primary-600' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Dashboard
+              </Link>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-500">v1.0.0</span>
+              </div>
+            </nav>
           </div>
         </div>
       </header>

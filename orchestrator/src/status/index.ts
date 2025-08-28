@@ -1,6 +1,41 @@
 import { Request, Response } from 'express';
 import { executeCypher } from '../ingest/index';
 
+// Utility function to convert Neo4j Integer objects to regular numbers
+function toNumber(value: any): number {
+  if (value && typeof value === 'object' && 'low' in value && 'high' in value) {
+    // Neo4j Integer object - convert to JavaScript number
+    return value.high * 0x100000000 + value.low;
+  }
+  return typeof value === 'number' ? value : 0;
+}
+
+// Utility function to recursively convert Neo4j integers in an object
+function convertNeo4jIntegers(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj === 'object' && 'low' in obj && 'high' in obj) {
+    // This is a Neo4j Integer
+    return toNumber(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertNeo4jIntegers);
+  }
+  
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertNeo4jIntegers(value);
+    }
+    return converted;
+  }
+  
+  return obj;
+}
+
 export interface RunStats {
   run_id: string;
   kb_id: string;
@@ -145,15 +180,25 @@ export async function getKnowledgeBaseStatus(kb_id: string): Promise<KnowledgeBa
     
     const kb = kbResult[0].kb;
     
-    // Get node and relationship counts
-    const countsResult = await executeCypher(`
-      MATCH (n {kb_id: $kb_id})
-      WITH count(n) as nodeCount
-      MATCH ()-[r {kb_id: $kb_id}]-()
-      RETURN nodeCount, count(r) as relCount
-    `, { kb_id });
+    // Get node and relationship counts with separate queries for robustness
+    let nodeCount = 0;
+    let relCount = 0;
     
-    const counts = countsResult[0] || { nodeCount: 0, relCount: 0 };
+    try {
+      const nodeResult = await executeCypher('MATCH (n {kb_id: $kb_id}) RETURN count(n) as nodeCount', { kb_id });
+      nodeCount = nodeResult[0]?.nodeCount || 0;
+    } catch (error) {
+      console.warn(`Failed to count nodes for KB ${kb_id}:`, error);
+    }
+    
+    try {
+      const relResult = await executeCypher('MATCH ()-[r {kb_id: $kb_id}]-() RETURN count(r) as relCount', { kb_id });
+      relCount = relResult[0]?.relCount || 0;
+    } catch (error) {
+      console.warn(`Failed to count relationships for KB ${kb_id}:`, error);
+    }
+    
+    const counts = { nodeCount, relCount };
     
     // Get node type breakdown
     const nodeTypesResult = await executeCypher(`
@@ -219,7 +264,7 @@ export async function getKnowledgeBaseStatus(kb_id: string): Promise<KnowledgeBa
       healthStatus = 'warning';
     }
 
-    return {
+    const kbStatusResponse = {
       kb_id,
       created_at: kb.created_at,
       updated_at: kb.updated_at,
@@ -236,6 +281,9 @@ export async function getKnowledgeBaseStatus(kb_id: string): Promise<KnowledgeBa
       node_types: nodeTypes,
       health_status: healthStatus
     };
+
+    // Convert Neo4j Integer objects to regular numbers before returning
+    return convertNeo4jIntegers(kbStatusResponse);
     
   } catch (error) {
     console.error(`Error getting KB status for ${kb_id}:`, error);
@@ -257,17 +305,33 @@ export async function getSystemStatus(): Promise<SystemStatus> {
       console.warn('Neo4j connection test failed:', error);
     }
     
-    // Get system-wide statistics
-    const systemStatsResult = await executeCypher(`
-      MATCH (kb:KnowledgeBase)
-      WITH count(kb) as kbCount
-      MATCH (n) WHERE n.kb_id IS NOT NULL
-      WITH kbCount, count(n) as totalNodes
-      MATCH ()-[r]-() WHERE r.kb_id IS NOT NULL
-      RETURN kbCount, totalNodes, count(r) as totalRels
-    `);
+    // Get system-wide statistics with separate queries for robustness
+    let kbCount = 0;
+    let totalNodes = 0; 
+    let totalRels = 0;
     
-    const systemStats = systemStatsResult[0] || { kbCount: 0, totalNodes: 0, totalRels: 0 };
+    try {
+      const kbResult = await executeCypher('MATCH (kb:KnowledgeBase) RETURN count(kb) as kbCount');
+      kbCount = kbResult[0]?.kbCount || 0;
+    } catch (error) {
+      console.warn('Failed to count KnowledgeBase nodes:', error);
+    }
+    
+    try {
+      const nodeResult = await executeCypher('MATCH (n) WHERE n.kb_id IS NOT NULL RETURN count(n) as totalNodes');
+      totalNodes = nodeResult[0]?.totalNodes || 0;
+    } catch (error) {
+      console.warn('Failed to count nodes with kb_id:', error);
+    }
+    
+    try {
+      const relResult = await executeCypher('MATCH ()-[r]-() WHERE r.kb_id IS NOT NULL RETURN count(r) as totalRels');
+      totalRels = relResult[0]?.totalRels || 0;
+    } catch (error) {
+      console.warn('Failed to count relationships with kb_id:', error);
+    }
+    
+    const systemStats = { kbCount, totalNodes, totalRels };
     
     // Get all KB statuses
     const kbsResult = await executeCypher('MATCH (kb:KnowledgeBase) RETURN kb.kb_id as kb_id');
@@ -294,7 +358,7 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     if (activeRuns > 5) healthScore -= 10; // Too many active runs might indicate issues
     healthScore = Math.max(0, healthScore);
 
-    return {
+    const statusResponse = {
       service: 'Knowledge Graph Orchestrator',
       version: '1.0.0',
       uptime_seconds: Math.floor((Date.now() - systemStartTime) / 1000),
@@ -311,6 +375,9 @@ export async function getSystemStatus(): Promise<SystemStatus> {
       last_activity: lastActivity,
       health_score: healthScore
     };
+
+    // Convert Neo4j Integer objects to regular numbers before returning
+    return convertNeo4jIntegers(statusResponse);
     
   } catch (error) {
     console.error('Error getting system status:', error);

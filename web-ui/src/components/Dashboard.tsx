@@ -54,31 +54,121 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">System Dashboard</h1>
-        <button onClick={loadSystemStatus} className="btn-secondary">
-          Refresh
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Knowledge Graph Dashboard</h1>
+          <p className="text-gray-600 mt-1">Monitor your knowledge bases and system health</p>
+        </div>
+        <div className="flex space-x-3">
+          <button onClick={loadSystemStatus} className="btn-secondary">
+            Refresh
+          </button>
+          <button 
+            onClick={() => window.open('/ui/setup', '_blank')}
+            className="btn-primary"
+          >
+            Setup Wizard
+          </button>
+        </div>
       </div>
 
       {systemStatus && (
         <>
           {/* System Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div className="card p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Health Score</h3>
-              <p className="text-3xl font-bold text-gray-900">{systemStatus.health_score}/100</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-3xl font-bold text-gray-900">{systemStatus.health_score}</p>
+                <span className="text-sm text-gray-500">/100</span>
+              </div>
+              <div className={`text-xs mt-1 ${
+                systemStatus.health_score >= 80 ? 'text-green-600' :
+                systemStatus.health_score >= 60 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {systemStatus.health_score >= 80 ? 'Excellent' :
+                 systemStatus.health_score >= 60 ? 'Good' : 'Needs Attention'}
+              </div>
             </div>
             <div className="card p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Knowledge Bases</h3>
               <p className="text-3xl font-bold text-gray-900">{systemStatus.total_kbs}</p>
+              <div className="text-xs text-gray-500 mt-1">
+                {systemStatus.total_kbs === 1 ? 'Active KB' : 'Active KBs'}
+              </div>
             </div>
             <div className="card p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Total Nodes</h3>
               <p className="text-3xl font-bold text-gray-900">{systemStatus.total_nodes?.toLocaleString() || 0}</p>
+              <div className="text-xs text-gray-500 mt-1">Entities</div>
             </div>
             <div className="card p-6">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Relationships</h3>
               <p className="text-3xl font-bold text-gray-900">{systemStatus.total_relationships?.toLocaleString() || 0}</p>
+              <div className="text-xs text-gray-500 mt-1">Connections</div>
+            </div>
+            <div className="card p-6">
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Active Runs</h3>
+              <p className="text-3xl font-bold text-gray-900">{systemStatus.active_runs || 0}</p>
+              <div className="text-xs text-gray-500 mt-1">
+                {systemStatus.total_runs_completed || 0} completed
+              </div>
+            </div>
+          </div>
+
+          {/* System Health Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Health Score Details */}
+            <div className="card p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">System Health Details</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Neo4j Connection</span>
+                  <span className={`text-sm font-medium ${
+                    systemStatus.neo4j_connected ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {systemStatus.neo4j_connected ? 'Connected' : 'Disconnected'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Service Uptime</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {Math.floor(systemStatus.uptime_seconds / 3600)}h {Math.floor((systemStatus.uptime_seconds % 3600) / 60)}m
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Memory Usage</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {Math.round(systemStatus.memory_usage.heapUsed / (1024 * 1024))}MB
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Errors</span>
+                  <span className={`text-sm font-medium ${
+                    systemStatus.total_errors > 0 ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {systemStatus.total_errors || 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="card p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+              <div className="space-y-3">
+                <button className="w-full btn-primary">
+                  Run System Diagnostics
+                </button>
+                <button className="w-full btn-secondary">
+                  Export System Report
+                </button>
+                <button className="w-full btn-secondary">
+                  View Query History
+                </button>
+                <button className="w-full text-gray-600 hover:text-gray-900 py-2 px-4 border border-gray-300 rounded-lg transition-colors">
+                  Manage Data Sources
+                </button>
+              </div>
             </div>
           </div>
 
@@ -95,33 +185,131 @@ export function Dashboard() {
             ) : (
               <div className="space-y-4">
                 {systemStatus.knowledge_bases.map((kb) => (
-                  <div key={kb.kb_id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{kb.kb_id}</h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {kb.total_nodes} nodes, {kb.total_relationships} relationships
-                        </p>
+                  <div key={kb.kb_id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{kb.kb_id}</h3>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full border ${
+                            kb.health_status === 'healthy' ? 'status-healthy' :
+                            kb.health_status === 'warning' ? 'status-warning' : 'status-error'
+                          }`}>
+                            {kb.health_status}
+                          </span>
+                        </div>
+                        
+                        {/* KB Statistics */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-sm text-gray-500">Nodes</p>
+                            <p className="text-lg font-semibold text-gray-900">{kb.total_nodes?.toLocaleString() || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Relationships</p>
+                            <p className="text-lg font-semibold text-gray-900">{kb.total_relationships?.toLocaleString() || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Sources</p>
+                            <p className="text-lg font-semibold text-gray-900">{kb.sources.length}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Node Types</p>
+                            <p className="text-lg font-semibold text-gray-900">{kb.node_types?.length || 0}</p>
+                          </div>
+                        </div>
+
+                        {/* Last Sync Status */}
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-500">Last Successful Sync</p>
+                          <p className="text-sm text-gray-700">
+                            {kb.last_successful_sync 
+                              ? new Date(kb.last_successful_sync).toLocaleString()
+                              : 'Never'
+                            }
+                          </p>
+                        </div>
+
+                        {/* Data Freshness */}
+                        {kb.data_freshness_hours !== undefined && (
+                          <div className="mb-3">
+                            <p className="text-sm text-gray-500">Data Freshness</p>
+                            <p className={`text-sm font-medium ${
+                              kb.data_freshness_hours <= 24 ? 'text-green-600' :
+                              kb.data_freshness_hours <= 168 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {kb.data_freshness_hours <= 1 ? 'Less than 1 hour ago' :
+                               kb.data_freshness_hours <= 24 ? `${Math.round(kb.data_freshness_hours)} hours ago` :
+                               `${Math.round(kb.data_freshness_hours / 24)} days ago`}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Error Status */}
+                        {kb.last_error && (
+                          <div className="mb-3">
+                            <p className="text-sm text-red-600 font-medium">Last Error</p>
+                            <p className="text-sm text-red-700">{kb.last_error}</p>
+                            <p className="text-xs text-gray-500">
+                              {kb.last_error_at && new Date(kb.last_error_at).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${
-                        kb.health_status === 'healthy' ? 'status-healthy' :
-                        kb.health_status === 'warning' ? 'status-warning' : 'status-error'
-                      }`}>
-                        {kb.health_status}
-                      </span>
                     </div>
+
+                    {/* Sources Details */}
+                    {/* Sources Details */}
                     {kb.sources.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-sm text-gray-600">Sources:</p>
-                        <div className="flex flex-wrap gap-2 mt-1">
+                      <div className="border-t border-gray-100 pt-4">
+                        <p className="text-sm font-medium text-gray-600 mb-3">Data Sources ({kb.sources.length})</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {kb.sources.map((source) => (
-                            <span key={source.source_id} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              {source.source_id}
-                            </span>
+                            <div key={source.source_id} className="bg-gray-50 rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-medium text-sm text-gray-900">{source.source_id}</span>
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  source.last_sync_status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  source.last_sync_status === 'running' ? 'bg-blue-100 text-blue-800' :
+                                  source.last_sync_status === 'error' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {source.last_sync_status || 'pending'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-600 space-y-1">
+                                <div>Records: {source.records_count?.toLocaleString() || 0}</div>
+                                <div>
+                                  Last sync: {source.last_sync_at 
+                                    ? new Date(source.last_sync_at).toLocaleDateString()
+                                    : 'Never'
+                                  }
+                                </div>
+                                {source.last_error && (
+                                  <div className="text-red-600">
+                                    Error: {source.last_error}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
+
+                    {/* KB Actions */}
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <div className="flex space-x-3">
+                        <button className="btn-primary text-sm">
+                          Query Knowledge Base
+                        </button>
+                        <button className="btn-secondary text-sm">
+                          View Details
+                        </button>
+                        <button className="text-sm text-gray-600 hover:text-gray-900">
+                          Sync Data
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

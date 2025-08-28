@@ -5,6 +5,79 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2025-08-27 - Minimal Web Console Implementation
+
+### Added
+- **🎨 Complete Operational Monitoring Dashboard** - 80% of POST_AUDIT_TODO Minimal Web Console requirement
+  - **Professional React Interface**: Single-page operational monitoring dashboard with modern UI design
+  - **Knowledge Base Management**: Comprehensive KB listings showing sources, node counts, health scores, and data freshness
+  - **Real-time System Metrics**: Live health scoring (0-100), uptime tracking, memory usage, and error monitoring
+  - **Interactive Controls**: Refresh capabilities, quick actions, and navigation between setup wizard and dashboard
+  - **Responsive Design**: Professional Tailwind CSS styling with loading states, error handling, and mobile compatibility
+
+- **📊 Advanced KB Status Display**
+  - **Individual KB Cards**: Detailed view of each knowledge base with node/relationship counts, source listings, and sync status
+  - **Health Indicators**: Visual status indicators (healthy/warning/error) with color-coded badges
+  - **Data Freshness Analysis**: Time-based freshness indicators showing hours/days since last successful sync
+  - **Source Breakdown**: Per-source record counts, sync status, and error reporting
+  - **Action Buttons**: Ready-to-enhance "Query Knowledge Base" and "View Details" buttons for future citation tracing
+
+- **🔧 Enhanced Navigation & Integration**
+  - **Fixed Routing Architecture**: Resolved main.tsx bypassing App.tsx routing that prevented dashboard access
+  - **Seamless Wizard Integration**: Complete setup wizard to dashboard navigation flow with useNavigate hook
+  - **Layout Consistency**: Single header design eliminating duplicate UI elements
+  - **API Integration**: Full integration with /api/status and /api/health endpoints
+
+### Fixed
+- **🎯 Critical Navigation Issues** 
+  - **Broken Dashboard Access**: Fixed routing problems that prevented users from reaching operational dashboard
+  - **Double Header Display**: Removed duplicate header/footer from MultiStepSetupWizard when wrapped in Layout
+  - **Empty Data Display**: Resolved dashboard showing no data despite DEMO_MODE having 50 nodes across 4 KBs
+
+- **🔧 Neo4j Integration Stability**  
+  - **React Rendering Errors**: Fixed React minification errors from Neo4j Integer objects {low, high} format
+  - **API Response Format**: Added convertNeo4jIntegers utility for proper number conversion
+  - **Individual KB Queries**: Fixed knowledge base status queries with separated try/catch approach
+  - **Complex Query Failures**: Replaced problematic WITH clause queries for robust error handling
+
+### Enhanced
+- **📈 Production-Ready Monitoring**
+  - **System Health Dashboard**: 5-card overview showing health score, KB count, total nodes/relationships, and active runs
+  - **Operational Intelligence**: Memory usage tracking, uptime monitoring, Neo4j connectivity status
+  - **Knowledge Base Analytics**: Individual KB statistics with node types, relationship counts, and source analysis
+  - **Demo Data Integration**: Full population with realistic demo data (retail-demo: 16, confluence-demo: 11, github-kb: 22, slack-kb: 1)
+
+### Technical Improvements
+- **Error Handling**: Comprehensive try/catch separation for database queries with proper diagnostics
+- **Type Safety**: Neo4j Integer conversion utilities ensuring React compatibility
+- **Code Organization**: Clean separation of concerns between status API logic and UI components
+- **Performance**: Optimized query structure eliminating complex Cypher operations
+
+### Validation Results  
+- ✅ **Complete User Flow**: Setup wizard → dashboard navigation working seamlessly
+- ✅ **Data Visualization**: All 4 knowledge bases displaying correct metrics and health status
+- ✅ **Professional UI**: Clean, responsive interface with proper loading/error states
+- ✅ **API Integration**: Status endpoints returning React-compatible data with proper error handling
+- ✅ **POST_AUDIT_TODO Progress**: 4/5 Minimal Web Console requirements completed (80% done)
+
+### POST_AUDIT_TODO Impact
+This release delivers **80% of the HIGH PRIORITY Minimal Web Console requirement**:
+- ✅ Single SPA page for operational monitoring
+- ✅ KB listing with metadata (sources, runs, node counts, health scores)  
+- ✅ Wire to existing /api/status, /api/health endpoints
+- ✅ Integrate into existing web-ui
+- ⏳ **Remaining**: Citation tracing detail view (answer → citations → Cypher queries) - ready for next sprint
+
+### Breaking Changes
+- **Dashboard Access**: Users can now access operational dashboard directly via setup wizard completion or header navigation
+
+### Migration Guide
+- **Dashboard Navigation**: Complete setup wizard or use header navigation to access new operational monitoring dashboard
+- **Service Health**: Dashboard requires orchestrator running with DEMO_MODE=true for populated display
+
+### Impact
+This release transforms the Knowledge Graph Brain from having basic setup capabilities to providing comprehensive operational monitoring. Users now have professional dashboard access to monitor system health, knowledge base status, and data ingestion progress. The operational dashboard provides immediate visual confirmation of system functionality and serves as the foundation for advanced citation tracing features planned in the next release.
+
 ## [0.13.0] - 2025-08-26 - Universal OpenAPI Integration
 
 ### Added
