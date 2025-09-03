@@ -57,6 +57,17 @@ interface MCPConnector {
 
 ## Available Connectors
 
+**Current connector ecosystem with production status and capabilities:**
+
+| Connector | Status | Port | Auth Method | Primary Objects | Incremental Sync |
+|-----------|--------|------|------------|----------------|------------------|
+| **Confluence** | 🟢 GA | 3001 | API Token | Pages, Spaces, Comments | ✅ `since` parameter |
+| **GitHub** | � GA | 3002 | PAT/OAuth | Repos, Issues, PRs, Commits | ✅ `since` parameter |
+| **Slack** | 🟡 Beta | 3003 | Bot Token | Messages, Channels, Users | ✅ `oldest` timestamp |
+| **Retail-Mock** | 🔵 Demo | 8081 | None | Products, Orders, Customers | ❌ Static data |
+
+**🚀 New in v0.15.1**: GitHub connector includes [streamlined integration workflow](../docs/workflows/github-integration-guide.md) with automatic embedding generation and simplified schema registration.
+
 ### Confluence Connector
 
 **Purpose**: Extract pages, spaces, and user content from Atlassian Confluence
@@ -95,6 +106,102 @@ mappings:
 - `spaces` - Space metadata and hierarchy
 - `users` - User profiles and permissions
 - `comments` - Page comments and discussions
+
+### GitHub Connector
+
+**Purpose**: Extract repositories, issues, pull requests, and development workflow data from GitHub
+
+**Location**: `/connectors/github/`
+
+**Configuration**:
+```yaml
+# In knowledge base schema
+mappings:
+  sources:
+    - source_id: github-repo
+      connector_url: "http://localhost:3002/pull?owner=user&repo=project"
+      document_type: repository
+      extract:
+        node: Repository
+        assign:
+          id: "$.id"
+          name: "$.name"
+          description: "$.description"
+          language: "$.language"
+          stars: "$.stargazers_count"
+          forks: "$.forks_count"
+          url: "$.html_url"
+```
+
+**Features**:
+- 🏗️ Repository metadata with README content and statistics
+- 🐛 Issues with labels, assignees, and comments
+- 🔀 Pull requests with diff statistics and reviews
+- 📝 Commit history with messages and change statistics
+- 🚀 Release notes and version information
+- ⚡ Built-in rate limiting and GitHub API compliance
+- 🔄 Incremental sync using timestamps
+
+**Data Sources**:
+- `repositories` - Repository metadata and content
+- `issues` - Issue tracking and discussions
+- `pull_requests` - Code review and merge data
+- `commits` - Development history and changes
+- `releases` - Version releases and documentation
+
+**Authentication**:
+```bash
+# Required environment variables
+GITHUB_TOKEN=your_personal_access_token
+# Token needs: repo, read:org, read:user scopes
+```
+
+### Slack Connector
+
+**Purpose**: Extract messages, channels, and team communication data from Slack workspaces
+
+**Location**: `/connectors/slack/`
+
+**Configuration**:
+```yaml
+# In knowledge base schema
+mappings:
+  sources:
+    - source_id: slack-messages
+      connector_url: "http://localhost:3003"
+      document_type: message
+      extract:
+        node: Message
+        assign:
+          id: "$.ts"
+          text: "$.text"
+          channel: "$.channel"
+          user: "$.user"
+          timestamp: "$.ts"
+```
+
+**Features**:
+- 💬 Channel messages with threading support
+- 👥 User profiles and workspace membership
+- 📁 Channel metadata and organization structure
+- 🔗 Message threading and conversation context
+- 📎 File attachments and media references
+- ⚡ Real-time updates via Slack Events API
+- 🔄 Incremental sync with timestamp filtering
+
+**Data Sources**:
+- `messages` - Channel messages and threads
+- `channels` - Channel metadata and structure
+- `users` - User profiles and activity
+- `files` - Shared files and attachments
+
+**Authentication**:
+```bash
+# Required environment variables
+SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_APP_TOKEN=xapp-your-app-token
+# Requires: channels:read, users:read, files:read scopes
+```
 
 **MCP Endpoints**:
 ```bash
@@ -628,6 +735,8 @@ function sanitizeData(data) {
 
 ## Related Documentation
 
+- **[GitHub Integration Workflow](./workflows/github-integration-guide.md)** - Step-by-step guide for streamlined GitHub integration ⭐ **New**
+- **[Workflow Analysis & Improvements](./workflows/LEARNINGS.md)** - Technical analysis of workflow optimizations and success metrics
 - **[DSL Reference](./dsl.md)** - YAML schema language for connector configuration
 - **[API Documentation](./API.md)** - MCP and REST API specifications
 - **[Architecture Overview](./ARCHITECTURE.md)** - System integration patterns

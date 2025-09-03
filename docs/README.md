@@ -11,6 +11,11 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 - **[CLI Tools](./cli.md)** - Command-line tools for schema validation and system monitoring
 - **[Examples](../examples/)** - Complete working examples (Confluence, Retail demo)
 
+### 🔄 **Integration Workflows** ⭐ **New**
+- **[GitHub Integration Guide](./workflows/github-integration-guide.md)** - Complete streamlined workflow for GitHub repositories
+- **[Workflow Learnings](./workflows/LEARNINGS.md)** - Key insights from implementing live integrations
+- **[Streamlined Process Analysis](./workflows/github-integration-streamlined.md)** - Technical improvements and solutions
+
 ### 🏗️ System Architecture & Design
 - **[Architecture Overview](./ARCHITECTURE.md)** - Complete system design, data flow, and component interactions
 - **[API Reference](./API.md)** - Comprehensive MCP and REST API documentation with examples ⭐ **Enhanced v0.10.0**

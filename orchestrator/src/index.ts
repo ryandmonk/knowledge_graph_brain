@@ -125,6 +125,51 @@ app.post('/api/register-schema', async (req: Request, res: Response) => {
   }
 });
 
+// Enhanced endpoint that accepts raw YAML content
+app.post('/api/register-schema-yaml', async (req: Request, res: Response) => {
+  try {
+    const { kb_id, yaml_content } = req.body;
+    
+    if (!kb_id || !yaml_content) {
+      return res.status(400).json({ error: 'Missing kb_id or yaml_content' });
+    }
+    
+    // Parse and validate the schema
+    const schema = parseSchema(yaml_content);
+    
+    // Verify the kb_id matches
+    if (schema.kb_id !== kb_id) {
+      return res.status(400).json({ 
+        error: `Schema kb_id '${schema.kb_id}' does not match provided kb_id '${kb_id}'` 
+      });
+    }
+    
+    // Store the schema in memory for the MCP system
+    registeredSchemas.set(kb_id, schema);
+    
+    // Setup the knowledge base in Neo4j
+    await setupKB(kb_id, schema);
+    
+    console.log(`✅ Schema registered for KB: ${kb_id} via YAML endpoint`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Schema registered successfully from YAML',
+      kb_id: kb_id,
+      embedding_provider: schema.embedding.provider,
+      nodes: schema.schema.nodes.length,
+      relationships: schema.schema.relationships.length,
+      sources: schema.mappings.sources.length
+    });
+  } catch (error) {
+    console.error('YAML schema registration error:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      hint: 'Ensure your YAML is properly formatted and includes all required fields'
+    });
+  }
+});
+
 app.post('/api/ingest', async (req: Request, res: Response) => {
   try {
     const { kb_id, source_id } = req.body;

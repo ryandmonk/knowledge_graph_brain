@@ -9,7 +9,7 @@
 | Connector | Auth Method | Objects Supported | Pagination | Rate Limits | Incremental Sync | Status | 
 |-----------|------------|-------------------|------------|-------------|------------------|--------|
 | **Confluence** | API Token (Basic) | Pages, Blog Posts, Spaces, Comments, Tasks, Attachments | ✅ Cursor-based | ✅ Atlassian limits | ✅ `since` parameter | 🟢 **GA** |
-| **GitHub** | Personal Access Token / OAuth | Repositories, Issues, PRs, Commits, Releases | ✅ Per-page (100) | ✅ 5000/hour core | ✅ `since` parameter | 🟡 **Beta** |
+| **GitHub** | Personal Access Token / OAuth | Repositories, Issues, PRs, Commits, Releases | ✅ Per-page (100) | ✅ 5000/hour core | ✅ `since` parameter | � **GA** |
 | **Slack** | Bot Token | Messages, Channels, Threads, Users | ✅ Limit-based (1000) | ✅ Tier-based limits | ✅ `oldest` timestamp | 🟡 **Beta** |
 | **Retail-Mock** | None | Products, Orders, Customers | ❌ Fixed dataset | ❌ No limits | ❌ Static data | 🔵 **Demo** |
 

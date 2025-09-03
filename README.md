@@ -173,7 +173,7 @@ The web UI provides essential setup and monitoring capabilities. Additional feat
 | Connector | Status | Auth | Objects | Use Cases |
 |-----------|--------|------|---------|-----------|
 | **Confluence** | 🟢 GA | API Token | Pages, Spaces, Comments | Documentation, Knowledge Base |
-| **GitHub** | 🟡 Beta | PAT/OAuth | Repos, Issues, PRs | Code, Development Workflow |
+| **GitHub** | � GA | PAT/OAuth | Repos, Issues, PRs | Code, Development Workflow |
 | **Slack** | 🟡 Beta | Bot Token | Messages, Channels | Team Communication |
 | **Retail-Mock** | 🔵 Demo | None | Products, Orders | E-commerce, Demo Data |
 
@@ -271,7 +271,40 @@ The `/api/health` endpoint provides comprehensive system intelligence:
 - **Operational Metrics**: Memory usage, uptime, active runs tracking
 - **Knowledge Base Health**: Per-KB status with data freshness analysis
 
-### 5. Register Schemas (Required First Step)
+### 5. Register Schemas - Choose Your Method
+
+#### 🚀 **Option A: Streamlined YAML Registration** ⭐ **Recommended**
+
+New simplified workflow based on user feedback and testing:
+
+```bash
+# Simple YAML registration (no JSON escaping needed)
+curl -X POST http://localhost:3000/api/register-schema-yaml \
+  -H "Content-Type: application/json" \
+  -d '{
+    "kb_id": "github-demo",
+    "yaml_content": "'$(cat examples/github.yaml)'"
+  }'
+
+# Ingest with automatic embedding generation
+curl -X POST http://localhost:3000/api/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "kb_id": "github-demo", 
+    "source_id": "github-repos"
+  }'
+```
+
+**✅ Benefits:**
+- No complex JSON escaping required
+- Automatic embedding generation during ingestion
+- Better error messages and validation feedback
+- Ready for semantic search immediately
+
+📖 **[Complete GitHub Integration Guide →](docs/workflows/github-integration-guide.md)**
+
+#### **Option B: Advanced JSON Schema Registration**
+
 **The system now supports unlimited data sources through dynamic schema registration!**
 
 ```bash

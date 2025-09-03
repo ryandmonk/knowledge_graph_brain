@@ -3,9 +3,85 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Implementation } from '@modelcontextprotocol/sdk/types.js';
 import { parseSchema, applyMapping } from '../dsl/index';
 import { ConnectorClient } from '../connectors/index';
-import { mergeNodesAndRels, semanticSearch, executeCypher } from '../ingest/index';
+import { mergeNodesAndRels, semanticSearch, executeCypher, getDriver } from '../ingest/index';
 import { EmbeddingProviderFactory } from '../embeddings/index';
 import { startRun, updateRunStats, completeRun, addRunError, getKnowledgeBaseStatus } from '../status/index';
+
+/**
+ * Generate embeddings for nodes that don't have them yet
+ */
+async function generateEmbeddingsForNodes(kb_id: string, run_id: string, embeddingProvider: string): Promise<number> {
+  const driver = getDriver();
+  const session = driver.session();
+  
+  try {
+    // Get all nodes for this KB that don't have embeddings
+    const result = await session.run(`
+      MATCH (n {kb_id: $kb_id, run_id: $run_id})
+      WHERE n.embedding IS NULL
+      RETURN n
+      LIMIT 1000
+    `, { kb_id, run_id });
+    
+    if (result.records.length === 0) {
+      return 0;
+    }
+    
+    console.log(`🔄 Generating embeddings for ${result.records.length} nodes using ${embeddingProvider}...`);
+    
+    // Initialize embedding provider
+    const provider = EmbeddingProviderFactory.create(embeddingProvider);
+    
+    let embeddedCount = 0;
+    
+    // Process nodes in batches
+    const batchSize = 10;
+    for (let i = 0; i < result.records.length; i += batchSize) {
+      const batch = result.records.slice(i, i + batchSize);
+      
+      for (const record of batch) {
+        const node = record.get('n');
+        const properties = node.properties;
+        
+        // Create content for embedding from key fields
+        const contentFields = [];
+        if (properties.title) contentFields.push(properties.title);
+        if (properties.name) contentFields.push(properties.name);
+        if (properties.description) contentFields.push(properties.description);
+        if (properties.content) contentFields.push(properties.content);
+        
+        const content = contentFields.join(' ').trim();
+        
+        if (content.length > 0) {
+          try {
+            // Generate embedding
+            const embedding = await provider.embed(content) as number[];
+            
+            // Update node with embedding
+            await session.run(`
+              MATCH (n {kb_id: $kb_id, run_id: $run_id})
+              WHERE id(n) = $nodeId
+              SET n.embedding = $embedding
+            `, { 
+              kb_id, 
+              run_id, 
+              nodeId: node.identity,
+              embedding 
+            });
+            
+            embeddedCount++;
+          } catch (error) {
+            console.warn(`Failed to generate embedding for node ${node.identity}:`, error);
+          }
+        }
+      }
+    }
+    
+    return embeddedCount;
+  } finally {
+    await session.close();
+  }
+}
 
 // Define the structure for our schema
 export interface Schema {
@@ -299,7 +375,18 @@ server.registerTool(
         relationships_created: totalRels
       });
       
-      // TODO: 5. Generate embeddings and update vector index
+      // 5. Generate embeddings and update vector index
+      try {
+        console.log(`🔄 Generating embeddings for ${totalNodes} nodes...`);
+        const embeddedNodes = await generateEmbeddingsForNodes(kb_id, run_id, schema.embedding.provider);
+        console.log(`✅ Generated embeddings for ${embeddedNodes} nodes`);
+      } catch (embeddingError) {
+        const errorMessage = `Embedding generation failed: ${embeddingError instanceof Error ? embeddingError.message : 'Unknown error'}`;
+        console.error(errorMessage);
+        runErrors.push(errorMessage);
+        addRunError(run_id, errorMessage);
+      }
+      
       // TODO: 6. Write detailed provenance records
       
       // Complete the run - successful if we processed any docs, failed if all failed
