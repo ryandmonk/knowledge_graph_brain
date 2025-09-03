@@ -9,10 +9,12 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "dotenv": "^16.0.3"
+    "@types/express": "^5.0.3",
+    "dotenv": "^16.0.3",
+    "neo4j-driver": "^5.28.1"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^18.0.0"
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0"
   }
 }

@@ -13,6 +13,9 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 
+// Authentication integration
+import { authRouter, initAuthService, getAuthMiddleware, requirePermission, requireKBAccess } from './auth/routes';
+
 // GraphRAG Agent Integration
 let GraphRAGAgent: any;
 let createGraphRAGAgent: any;
@@ -29,11 +32,28 @@ async function initializeGraphRAGAgent() {
   }
 }
 
-// Initialize GraphRAG agent asynchronously
-initializeGraphRAGAgent();
+// Initialize services
+async function initializeServices() {
+  try {
+    // Initialize Neo4j driver
+    initDriver();
+    console.log('✅ Neo4j driver initialized');
+    
+    // Initialize authentication service
+    initAuthService();
+    console.log('✅ Authentication service initialized');
+    
+    // Initialize GraphRAG agent asynchronously
+    await initializeGraphRAGAgent();
+    
+  } catch (error) {
+    console.error('❌ Service initialization failed:', error);
+    process.exit(1);
+  }
+}
 
-// Initialize Neo4j driver
-initDriver();
+// Initialize all services
+initializeServices();
 
 const app = express();
 
@@ -54,6 +74,9 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+// Authentication routes (public access for API key management)
+app.use('/api/auth', authRouter);
 
 // Serve static files from the web UI build
 const webUIPath = path.join(__dirname, '../../web-ui/dist');

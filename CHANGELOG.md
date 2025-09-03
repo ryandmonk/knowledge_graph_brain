@@ -5,6 +5,125 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2025-09-03 - Enterprise Authentication System
+
+### Added
+- **🔐 Complete Enterprise Authentication System** - Phase 2A: Core Authentication Infrastructure
+  - **Database Schema Extension**: Neo4j authentication schema with API keys, roles, permissions, and audit events
+    - Unique constraints on `key_id` and `key_hash` for API key integrity
+    - Role-based access control with Admin/Operator/Viewer roles and granular permissions
+    - Performance indexes for authentication queries and audit event tracking
+    - Complete audit event schema for security monitoring and compliance
+  
+  - **Authentication Service**: Full CRUD operations with secure key generation and KB-scoped authorization (`shared/auth.ts`)
+    - Cryptographically secure API key generation (64-character hex keys with SHA256 hashing)
+    - KB-scoped authorization with single-tenant approach supporting per-knowledge-base access control
+    - Express middleware integration with drop-in authentication for existing endpoints
+    - Complete security audit logging with metadata tracking for all authentication events
+  
+  - **Neo4j Service Layer**: Unified database interface with transaction support (`shared/neo4j.ts`)
+    - Read/write operation abstraction with proper session management and connection pooling
+    - Transaction support for multi-query operations with automatic rollback on errors
+    - Health check capabilities and database statistics monitoring
+    - Generic TypeScript interfaces ensuring type safety across all database operations
+
+- **🛡️ API Management & Authorization Framework**
+  - **Complete REST API Endpoints**: Full CRUD operations for enterprise API key lifecycle management
+    - `POST /api/auth/api-keys` - Create new API key with roles and KB scopes
+    - `GET /api/auth/api-keys` - List all keys without revealing actual key values
+    - `DELETE /api/auth/api-keys/:key_id` - Revoke API key with complete audit trail
+    - `GET /api/auth/me` - Get current authentication context and permissions
+    - `GET /api/auth/stats` - Administrative statistics and monitoring (admin-only access)
+  
+  - **Authorization Middleware**: Production-ready access control with decorators
+    - `requirePermission(resource, action)` - Permission-based access control decorator
+    - `requireKBAccess()` - KB-scoped authorization for knowledge base operations
+    - Express middleware integration with automatic authentication context injection
+    - Comprehensive error handling with detailed permission feedback
+
+- **🎯 Role-Based Access Control (RBAC)**
+  - **Granular Permission Matrix**: Resource-action based permissions for enterprise deployment
+    - **Admin Role**: Full system access (kb:read, kb:write, kb:delete, api:manage, auth:admin)
+    - **Operator Role**: Knowledge base operations (kb:read, kb:write)
+    - **Viewer Role**: Read-only access (kb:read)
+  
+  - **KB-Scoped Permissions**: Single-tenant architecture with per-knowledge-base access control
+    - Global access with `kb_scopes: ['*']` for administrative users
+    - Granular KB access with `kb_scopes: ['kb-id-1', 'kb-id-2']` for scoped users
+    - Automatic scope validation on all KB-related operations
+
+### Enhanced
+- **🔧 Orchestrator Integration**: Complete authentication system integration
+  - Authentication routes mounted at `/api/auth/*` with full CORS support
+  - Service initialization with proper error handling and health checks
+  - TypeScript compilation with zero errors across all authentication components
+  - Production-ready build pipeline with shared package compilation
+
+- **📊 Security & Compliance Features**
+  - **Complete Audit Trail**: All authentication events logged with metadata for compliance monitoring
+  - **Secure Key Management**: API key hashing, expiration support, and revocation capabilities
+  - **Usage Tracking**: Last used timestamps, activity monitoring, and statistical reporting
+  - **Administrative Oversight**: Statistics endpoint providing role distribution and access analytics
+
+### Technical Improvements
+- **Shared Package Architecture**: Common authentication and database services across all components
+- **TypeScript Integration**: Full type safety with shared interfaces and service definitions
+- **Production Error Handling**: Comprehensive error handling with detailed diagnostic information
+- **Performance Optimization**: Indexed database queries and efficient session management
+
+### Fixed
+- **Authentication Integration**: Resolved TypeScript compilation errors and import path issues
+- **Database Schema**: Fixed Neo4j constraint syntax and migration execution patterns
+- **Service Dependencies**: Resolved Neo4j driver integration and shared package building
+
+### Validation Results
+- ✅ **Database Schema**: Neo4j authentication schema with constraints, indexes, and seed data deployed
+- ✅ **Authentication Service**: API key management with secure generation, validation, and revocation operational
+- ✅ **Authorization Framework**: Role-based permissions and KB-scoped access control implemented
+- ✅ **REST API Integration**: All authentication endpoints integrated into orchestrator and functional
+- ✅ **TypeScript Compilation**: Shared package built successfully with zero compilation errors
+- ✅ **Production Security**: Secure key hashing, audit logging, and comprehensive error handling validated
+
+### POST_AUDIT_TODO Impact
+This release completes **both critical POST_AUDIT_TODO requirements**:
+- ✅ **"Create connectors matrix documentation"** - **COMPLETED** in Phase 1A
+- ✅ **"Implement concrete auth & tenancy system"** - **COMPLETED** in Phase 2A
+
+### Breaking Changes
+- **New Authentication Requirement**: API endpoints now support optional authentication headers
+- **Database Schema Extension**: New authentication tables added (backward compatible)
+- **Shared Package Dependencies**: Authentication services require shared package compilation
+
+### Migration Guide
+- **Authentication Setup**: Use `bootstrap-auth.js` script to create initial admin API key
+- **API Integration**: Include `X-API-Key` or `Authorization: Bearer` headers for authenticated requests
+- **Development**: Run `npm run build` in `/shared` directory before building orchestrator
+
+### Security Considerations
+- **API Key Storage**: Keys are SHA256 hashed and never stored in plain text
+- **Audit Compliance**: All authentication events logged with timestamps and metadata
+- **Permission Granularity**: Resource-action based permissions supporting enterprise access control
+- **KB Isolation**: Single-tenant architecture with per-knowledge-base scope enforcement
+
+### Usage Examples
+```bash
+# Create admin API key
+curl -X POST http://localhost:3000/api/auth/api-keys \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Admin Key", "roles": ["admin"], "kb_scopes": ["*"]}'
+
+# Authenticate requests
+curl -H "X-API-Key: kgb_abc123..." http://localhost:3000/api/auth/me
+
+# Create KB-scoped key
+curl -X POST http://localhost:3000/api/auth/api-keys \
+  -H "X-API-Key: admin_key..." \
+  -d '{"name": "Marketing Access", "roles": ["operator"], "kb_scopes": ["marketing-kb"]}'
+```
+
+### Impact
+This release transforms the Knowledge Graph Brain from a demo system into an enterprise-ready platform with production-grade authentication, authorization, and security audit capabilities. The system now supports secure multi-user access with role-based permissions and knowledge base scoping, making it suitable for enterprise deployment with proper security controls and compliance monitoring.
+
 ## [0.14.1] - 2025-08-28 - Complete Citation Tracing Detail View
 
 ### Added
