@@ -15,32 +15,102 @@ class SlackAPI {
   constructor(token) {
     this.client = new WebClient(token || process.env.SLACK_BOT_TOKEN);
     this.rateLimits = new Map(); // Track rate limits per method
+    this.maxRetries = 3;
   }
 
-  async checkAuth() {
-    try {
-      const result = await this.client.auth.test();
-      return result;
-    } catch (error) {
-      throw new Error(`Slack authentication failed: ${error.message}`);
+  async sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async retryWithBackoff(operation, context = '', method = 'conversations.list') {
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        // Check if we need to wait for rate limits
+        await this.waitForRateLimit(method);
+        
+        const result = await operation();
+        
+        if (attempt > 1) {
+          console.log(`✅ Slack API call succeeded on attempt ${attempt} - ${context}`);
+        }
+        return result;
+        
+      } catch (error) {
+        const isRateLimited = error.code === 'slack_webapi_rate_limited';
+        const isServerError = error.code === 'slack_webapi_platform_error' || (error.data && error.data.error === 'internal_error');
+        const isNetworkError = error.code === 'ENOTFOUND' || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
+        
+        if (attempt === this.maxRetries) {
+          console.error(`❌ Slack API call failed after ${this.maxRetries} attempts - ${context}:`, {
+            code: error.code,
+            message: error.message,
+            data: error.data
+          });
+          throw new Error(`Slack API error after ${this.maxRetries} attempts: ${error.message}`);
+        }
+        
+        if (isRateLimited) {
+          const retryAfter = (error.retryAfter || 1) * 1000; // Convert to milliseconds
+          console.warn(`🚨 Slack rate limited, waiting ${retryAfter}ms, attempt ${attempt}/${this.maxRetries} - ${context}`);
+          this.updateRateLimit(method, retryAfter);
+          await this.sleep(retryAfter);
+        } else if (isServerError || isNetworkError) {
+          const backoffTime = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // Exponential backoff, max 30s
+          console.warn(`🔄 Retrying Slack API call in ${backoffTime}ms, attempt ${attempt}/${this.maxRetries} - ${context}:`, error.message);
+          await this.sleep(backoffTime);
+        } else {
+          console.error(`💥 Non-retryable Slack API error - ${context}:`, {
+            code: error.code,
+            message: error.message,
+            data: error.data
+          });
+          throw error;
+        }
+      }
     }
   }
 
+  updateRateLimit(method, retryAfter) {
+    this.rateLimits.set(method, {
+      resetTime: Date.now() + retryAfter,
+      retryAfter
+    });
+  }
+
+  async waitForRateLimit(method) {
+    const rateLimit = this.rateLimits.get(method);
+    if (rateLimit && Date.now() < rateLimit.resetTime) {
+      const waitTime = rateLimit.resetTime - Date.now();
+      console.log(`⏳ Waiting ${Math.round(waitTime / 1000)}s for Slack rate limit reset (${method})...`);
+      await this.sleep(waitTime);
+      this.rateLimits.delete(method);
+    }
+  }
+
+  async checkAuth() {
+    const operation = async () => {
+      const result = await this.client.auth.test();
+      return result;
+    };
+
+    return await this.retryWithBackoff(operation, 'checkAuth', 'auth.test');
+  }
+
   async getChannels(types = 'public_channel,private_channel') {
-    try {
+    const operation = async () => {
       const result = await this.client.conversations.list({
         types,
         limit: 1000,
         exclude_archived: true
       });
       return result.channels;
-    } catch (error) {
-      throw new Error(`Failed to fetch channels: ${error.message}`);
-    }
+    };
+
+    return await this.retryWithBackoff(operation, 'getChannels', 'conversations.list');
   }
 
   async getChannelHistory(channelId, since, limit = 1000) {
-    try {
+    const operation = async () => {
       const options = {
         channel: channelId,
         limit,
@@ -55,19 +125,23 @@ class SlackAPI {
 
       const result = await this.client.conversations.history(options);
       return result.messages || [];
-    } catch (error) {
-      throw new Error(`Failed to fetch channel history for ${channelId}: ${error.message}`);
-    }
+    };
+
+    return await this.retryWithBackoff(operation, `getChannelHistory(${channelId})`, 'conversations.history');
   }
 
   async getThreadReplies(channelId, threadTs) {
-    try {
+    const operation = async () => {
       const result = await this.client.conversations.replies({
         channel: channelId,
         ts: threadTs,
         inclusive: true
       });
       return result.messages || [];
+    };
+
+    try {
+      return await this.retryWithBackoff(operation, `getThreadReplies(${channelId}:${threadTs})`, 'conversations.replies');
     } catch (error) {
       console.warn(`Failed to fetch thread replies for ${channelId}:${threadTs}:`, error.message);
       return [];
@@ -75,9 +149,13 @@ class SlackAPI {
   }
 
   async getUserInfo(userId) {
-    try {
+    const operation = async () => {
       const result = await this.client.users.info({ user: userId });
       return result.user;
+    };
+
+    try {
+      return await this.retryWithBackoff(operation, `getUserInfo(${userId})`, 'users.info');
     } catch (error) {
       console.warn(`Failed to fetch user info for ${userId}:`, error.message);
       return null;
@@ -85,9 +163,13 @@ class SlackAPI {
   }
 
   async getChannelInfo(channelId) {
-    try {
+    const operation = async () => {
       const result = await this.client.conversations.info({ channel: channelId });
       return result.channel;
+    };
+
+    try {
+      return await this.retryWithBackoff(operation, `getChannelInfo(${channelId})`, 'conversations.info');
     } catch (error) {
       console.warn(`Failed to fetch channel info for ${channelId}:`, error.message);
       return null;
@@ -646,16 +728,27 @@ app.post('/mcp', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`💬 Slack Connector running on port ${port}`);
-  console.log(`📊 Available endpoints:`);
-  console.log(`   GET  http://localhost:${port}/health`);
-  console.log(`   GET  http://localhost:${port}/sources`);
-  console.log(`   GET  http://localhost:${port}/pull[?channels=C123,C456][&since=2024-01-01]`);
-  console.log(`   POST http://localhost:${port}/mcp`);
-  console.log('');
-  console.log('🔑 Environment variables:');
-  console.log(`   SLACK_BOT_TOKEN: ${process.env.SLACK_BOT_TOKEN ? '✅ Set' : '❌ Not set'}`);
-  console.log(`   SLACK_WORKSPACE: ${process.env.SLACK_WORKSPACE || '❌ Not set (optional)'}`);
-});
+// Start the server (conditionally for testing)
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`💬 Slack Connector running on port ${port}`);
+    console.log(`📊 Available endpoints:`);
+    console.log(`   GET  http://localhost:${port}/health`);
+    console.log(`   GET  http://localhost:${port}/sources`);
+    console.log(`   GET  http://localhost:${port}/pull[?channels=C123,C456][&since=2024-01-01]`);
+    console.log(`   POST http://localhost:${port}/mcp`);
+    console.log('');
+    console.log('🔑 Environment variables:');
+    console.log(`   SLACK_BOT_TOKEN: ${process.env.SLACK_BOT_TOKEN ? '✅ Set' : '❌ Not set'}`);
+    console.log(`   SLACK_WORKSPACE: ${process.env.SLACK_WORKSPACE || '❌ Not set (optional)'}`);
+  });
+}
+
+// Export for testing
+module.exports = {
+  SlackAPI,
+  getDemoSlackMessages,
+  getDemoSlackChannels,
+  app,
+  server
+};

@@ -23,6 +23,64 @@ class GitHubAPI {
     this.octokit = getOctokit(auth);
     this.rateLimitRemaining = 5000;
     this.rateLimitReset = new Date();
+    this.maxRetries = 3;
+  }
+
+  async sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async waitForRateLimit() {
+    if (this.rateLimitRemaining < 10) {
+      const waitTime = Math.max(0, this.rateLimitReset.getTime() - Date.now());
+      if (waitTime > 0) {
+        console.log(`⏳ Waiting ${Math.round(waitTime / 1000)}s for GitHub rate limit reset...`);
+        await this.sleep(waitTime);
+      }
+    }
+  }
+
+  async retryWithBackoff(operation, context = '') {
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        await this.waitForRateLimit();
+        const result = await operation();
+        
+        if (attempt > 1) {
+          console.log(`✅ GitHub API call succeeded on attempt ${attempt} - ${context}`);
+        }
+        return result;
+        
+      } catch (error) {
+        const isRateLimited = error.status === 403 && error.message && error.message.includes('rate limit');
+        const isServerError = error.status >= 500;
+        const isNetworkError = error.code === 'ENOTFOUND' || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
+        
+        if (attempt === this.maxRetries) {
+          console.error(`❌ GitHub API call failed after ${this.maxRetries} attempts - ${context}:`, {
+            status: error.status,
+            message: error.message,
+            code: error.code
+          });
+          throw new Error(`GitHub API error after ${this.maxRetries} attempts: ${error.message}`);
+        }
+        
+        if (isRateLimited) {
+          console.warn(`🚨 Rate limited, attempt ${attempt}/${this.maxRetries} - ${context}`);
+          await this.sleep(60000); // Wait 1 minute for rate limit
+        } else if (isServerError || isNetworkError) {
+          const backoffTime = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // Exponential backoff, max 30s
+          console.warn(`🔄 Retrying GitHub API call in ${backoffTime}ms, attempt ${attempt}/${this.maxRetries} - ${context}:`, error.message);
+          await this.sleep(backoffTime);
+        } else {
+          console.error(`💥 Non-retryable GitHub API error - ${context}:`, {
+            status: error.status,
+            message: error.message
+          });
+          throw error;
+        }
+      }
+    }
   }
 
   async checkRateLimit() {
@@ -30,107 +88,150 @@ class GitHubAPI {
       const { data } = await this.octokit.rateLimit.get();
       this.rateLimitRemaining = data.core.remaining;
       this.rateLimitReset = new Date(data.core.reset * 1000);
+      
+      // Log rate limit status for monitoring
+      if (this.rateLimitRemaining < 100) {
+        console.warn(`🚨 GitHub rate limit low: ${this.rateLimitRemaining} remaining until ${this.rateLimitReset.toISOString()}`);
+      }
+      
+      return {
+        remaining: this.rateLimitRemaining,
+        reset: this.rateLimitReset,
+        limit: data.core.limit
+      };
     } catch (error) {
       console.warn('Could not check rate limit:', error.message);
+      return null;
     }
   }
 
   async getRepositories(owner, since) {
-    const options = {
-      username: owner,
-      type: 'all',
-      sort: 'updated',
-      per_page: 100
+    const operation = async () => {
+      const options = {
+        username: owner,
+        type: 'all',
+        sort: 'updated',
+        per_page: 100
+      };
+
+      if (since) {
+        options.since = since;
+      }
+
+      const { data } = await this.octokit.repos.listForUser(options);
+      return data;
     };
 
-    if (since) {
-      options.since = since;
-    }
-
-    const { data } = await this.octokit.repos.listForUser(options);
-    return data;
+    return await this.retryWithBackoff(operation, `getRepositories(${owner}, ${since || 'no-since'})`);
   }
 
   async getRepository(owner, repo) {
-    const { data } = await this.octokit.repos.get({ owner, repo });
-    return data;
+    const operation = async () => {
+      const { data } = await this.octokit.repos.get({ owner, repo });
+      return data;
+    };
+
+    return await this.retryWithBackoff(operation, `getRepository(${owner}/${repo})`);
   }
 
   async getIssues(owner, repo, since, state = 'all') {
-    const options = {
-      owner,
-      repo,
-      state,
-      sort: 'updated',
-      per_page: 100
+    const operation = async () => {
+      const options = {
+        owner,
+        repo,
+        state,
+        sort: 'updated',
+        per_page: 100
+      };
+
+      if (since) {
+        options.since = since;
+      }
+
+      const { data } = await this.octokit.issues.listForRepo(options);
+      return data;
     };
 
-    if (since) {
-      options.since = since;
-    }
-
-    const { data } = await this.octokit.issues.listForRepo(options);
-    return data;
+    return await this.retryWithBackoff(operation, `getIssues(${owner}/${repo}, ${since || 'no-since'})`);
   }
 
   async getPullRequests(owner, repo, since, state = 'all') {
-    const options = {
-      owner,
-      repo,
-      state,
-      sort: 'updated',
-      per_page: 100
+    const operation = async () => {
+      const options = {
+        owner,
+        repo,
+        state,
+        sort: 'updated',
+        per_page: 100
+      };
+
+      if (since) {
+        // GitHub API doesn't support since for PRs directly, we'll filter after
+      }
+
+      const { data } = await this.octokit.pulls.list(options);
+      
+      if (since) {
+        const sinceDate = new Date(since);
+        return data.filter(pr => new Date(pr.updated_at) > sinceDate);
+      }
+      
+      return data;
     };
 
-    if (since) {
-      // GitHub API doesn't support since for PRs directly, we'll filter after
-    }
-
-    const { data } = await this.octokit.pulls.list(options);
-    
-    if (since) {
-      const sinceDate = new Date(since);
-      return data.filter(pr => new Date(pr.updated_at) > sinceDate);
-    }
-    
-    return data;
+    return await this.retryWithBackoff(operation, `getPullRequests(${owner}/${repo}, ${since || 'no-since'})`);
   }
 
   async getCommits(owner, repo, since) {
-    const options = {
-      owner,
-      repo,
-      per_page: 100
+    const operation = async () => {
+      const options = {
+        owner,
+        repo,
+        per_page: 100
+      };
+
+      if (since) {
+        options.since = since;
+      }
+
+      const { data } = await this.octokit.repos.listCommits(options);
+      return data;
     };
 
-    if (since) {
-      options.since = since;
-    }
-
-    const { data } = await this.octokit.repos.listCommits(options);
-    return data;
+    return await this.retryWithBackoff(operation, `getCommits(${owner}/${repo}, ${since || 'no-since'})`);
   }
 
   async getReleases(owner, repo) {
-    const { data } = await this.octokit.repos.listReleases({
-      owner,
-      repo,
-      per_page: 100
-    });
-    return data;
+    const operation = async () => {
+      const { data } = await this.octokit.repos.listReleases({
+        owner,
+        repo,
+        per_page: 100
+      });
+      return data;
+    };
+
+    return await this.retryWithBackoff(operation, `getReleases(${owner}/${repo})`);
   }
 
   async getReadme(owner, repo) {
-    try {
-      const { data } = await this.octokit.repos.getReadme({ owner, repo });
-      return {
-        content: Buffer.from(data.content, 'base64').toString('utf-8'),
-        path: data.path,
-        sha: data.sha
-      };
-    } catch (error) {
-      return null;
-    }
+    const operation = async () => {
+      try {
+        const { data } = await this.octokit.repos.getReadme({ owner, repo });
+        return {
+          content: Buffer.from(data.content, 'base64').toString('utf-8'),
+          path: data.path,
+          sha: data.sha
+        };
+      } catch (error) {
+        if (error.status === 404) {
+          return null; // No README found
+        }
+        throw error; // Re-throw other errors for retry logic
+      }
+    };
+
+    return await this.retryWithBackoff(operation, `getReadme(${owner}/${repo})`);
   }
 }
 
@@ -698,19 +799,29 @@ app.post('/mcp', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(config.PORT, () => {
-  console.log(`🐙 GitHub Connector running on http://localhost:${config.PORT}`);
-  console.log(`📊 Available endpoints:`);
-  console.log(`   GET  http://localhost:${config.PORT}/health`);
-  console.log(`   GET  http://localhost:${config.PORT}/sources`);
-  console.log(`   GET  http://localhost:${config.PORT}/pull?owner=username[&repo=reponame]`);
-  console.log(`   POST http://localhost:${config.PORT}/mcp`);
-  console.log('');
-  console.log('🔑 Configuration:');
-  console.log(`   DEMO_MODE: ${config.DEMO_MODE ? '🎭 ACTIVE' : '🔐 DISABLED'}`);
-  console.log(`   GITHUB_TOKEN: ${config.GITHUB_TOKEN ? '✅ Set' : '❌ Not set'}`);
-  if (config.DEMO_MODE) {
-    console.log('   Using mock repository data for demonstration purposes');
-  }
-});
+// Start the server only if not in test environment
+if (require.main === module) {
+  // Start the server
+  app.listen(config.PORT, () => {
+    console.log(`🐙 GitHub Connector running on http://localhost:${config.PORT}`);
+    console.log(`📊 Available endpoints:`);
+    console.log(`   GET  http://localhost:${config.PORT}/health`);
+    console.log(`   GET  http://localhost:${config.PORT}/sources`);
+    console.log(`   GET  http://localhost:${config.PORT}/pull?owner=username[&repo=reponame]`);
+    console.log(`   POST http://localhost:${config.PORT}/mcp`);
+    console.log('');
+    console.log('🔑 Configuration:');
+    console.log(`   DEMO_MODE: ${config.DEMO_MODE ? '🎭 ACTIVE' : '🔐 DISABLED'}`);
+    console.log(`   GITHUB_TOKEN: ${config.GITHUB_TOKEN ? '✅ Set' : '❌ Not set'}`);
+    if (config.DEMO_MODE) {
+      console.log('   Using mock repository data for demonstration purposes');
+    }
+  });
+}
+
+// Export classes for testing
+module.exports = {
+  GitHubAPI,
+  getDemoRepositories,
+  app
+};

@@ -166,7 +166,22 @@ The web UI provides essential setup and monitoring capabilities. Additional feat
 
 ---
 
-## 🚀 Demo Walkthrough
+## � Data Connectors
+
+**Production-ready connectors for enterprise data sources:**
+
+| Connector | Status | Auth | Objects | Use Cases |
+|-----------|--------|------|---------|-----------|
+| **Confluence** | 🟢 GA | API Token | Pages, Spaces, Comments | Documentation, Knowledge Base |
+| **GitHub** | 🟡 Beta | PAT/OAuth | Repos, Issues, PRs | Code, Development Workflow |
+| **Slack** | 🟡 Beta | Bot Token | Messages, Channels | Team Communication |
+| **Retail-Mock** | 🔵 Demo | None | Products, Orders | E-commerce, Demo Data |
+
+**[📋 Complete Connectors Matrix](./connectors/README.md)** - Detailed comparison, auth setup, and integration guides
+
+---
+
+## �🚀 Demo Walkthrough
 
 ### Choose Your Setup Method
 
