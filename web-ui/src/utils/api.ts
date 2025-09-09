@@ -209,7 +209,7 @@ class KnowledgeGraphAPI {
       { name: 'neo4j', url: 'http://localhost:7474' },
       { name: 'ollama', url: 'http://localhost:11434/api/tags' },
       { name: 'orchestrator', url: 'http://localhost:3000/api/health' },
-      { name: 'github-connector', url: 'http://localhost:3002/health' },
+      { name: 'github-connector', url: 'http://localhost:3001/health' },
       { name: 'confluence-connector', url: 'http://localhost:3004/health' },
       { name: 'slack-connector', url: 'http://localhost:3003/health' }
     ];
@@ -324,7 +324,7 @@ class KnowledgeGraphAPI {
     if (url.includes('7474')) return 'Neo4j';
     if (url.includes('11434')) return 'Ollama';
     if (url.includes('3000')) return 'Orchestrator';
-    if (url.includes('3002')) return 'GitHub Connector';
+    if (url.includes('3001')) return 'GitHub Connector';
     if (url.includes('3003')) return 'Slack Connector';
     if (url.includes('3004')) return 'Confluence Connector';
     return 'Unknown Service';

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, RefreshCw, Settings, Database, Link, CheckSquare } from 'lucide-react';
 import { api, type EnvironmentConfig } from '../utils/api';
 import ConnectorConfigModal from './ConnectorConfigModal';
+import ConnectorIcon from './ConnectorIcon';
 import DemoModeToggle from './DemoModeToggle';
 import { LLMModelSelector } from './LLMModelSelector';
 
@@ -714,7 +715,11 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
               <div key={connector.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <span className="text-2xl">{connector.icon}</span>
+                    <ConnectorIcon 
+                      connectorId={connector.id} 
+                      className="text-blue-600" 
+                      size={28} 
+                    />
                     <div>
                       <h4 className="font-medium text-gray-900">{connector.name}</h4>
                       <p className="text-xs text-gray-500">Port {connector.port}</p>

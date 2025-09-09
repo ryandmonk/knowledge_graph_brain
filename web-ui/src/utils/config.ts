@@ -22,8 +22,8 @@ export const SERVICES = {
   },
   GITHUB_CONNECTOR: {
     name: 'GitHub Connector',
-    port: 3002,
-    healthCheck: 'http://localhost:3002/health'
+    port: 3001,
+    healthCheck: 'http://localhost:3001/health'
   },
   CONFLUENCE_CONNECTOR: {
     name: 'Confluence Connector',

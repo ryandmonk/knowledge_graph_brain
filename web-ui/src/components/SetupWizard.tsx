@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, RefreshCw, AlertTriangle, ChevronRight } from 'lucide-react';
 import { api, type SetupProgress, type ServiceHealthCheck } from '../utils/api';
 import { SETUP_STEPS, SERVICES } from '../utils/config';
+import ConnectorIcon from './ConnectorIcon';
 
 interface StepProps {
   step: typeof SETUP_STEPS[0];
@@ -62,10 +63,30 @@ function ServiceStatusCard({ service, onRecheck }: {
   const statusColor = service.status === 'healthy' ? 'status-healthy' : 
     service.status === 'checking' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'status-error';
 
+  // Extract connector ID from service name for connector-specific icons
+  const getConnectorId = (serviceName: string) => {
+    if (serviceName.toLowerCase().includes('github')) return 'github';
+    if (serviceName.toLowerCase().includes('slack')) return 'slack';
+    if (serviceName.toLowerCase().includes('confluence')) return 'confluence';
+    if (serviceName.toLowerCase().includes('retail')) return 'retail-mock';
+    return null;
+  };
+
+  const connectorId = getConnectorId(service.name);
+
   return (
     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
       <div className="flex items-center space-x-3">
-        {statusIcon}
+        <div className="flex items-center space-x-2">
+          {connectorId && (
+            <ConnectorIcon 
+              connectorId={connectorId} 
+              className="text-gray-600" 
+              size={20} 
+            />
+          )}
+          {statusIcon}
+        </div>
         <div>
           <h4 className="font-medium text-gray-900">{service.name}</h4>
           {service.port && (
@@ -311,15 +332,91 @@ export function SetupWizard() {
 
               {/* Step 3: Connectors - Enhanced */}
               {step.id === 'connectors' && (
-                <div className="space-y-4">
-                  <div className="text-center py-6">
-                    <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                      <CheckCircle className="w-8 h-8 text-blue-600" />
+                <div className="space-y-6">
+                  {/* Data Connectors Section */}
+                  <div>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm font-medium">🔌</span>
+                      </div>
+                      <h4 className="font-medium text-gray-900">Data Connectors</h4>
                     </div>
-                    <h4 className="font-medium text-gray-900 mb-2">Connectors Available</h4>
                     <p className="text-sm text-gray-600 mb-4">
-                      GitHub, Confluence, Slack, and other data source connectors are ready for configuration through the dashboard interface.
+                      Choose and configure data sources for your knowledge graph
                     </p>
+                    
+                    {/* Connector Services Status */}
+                    {setupProgress && setupProgress.connectors && setupProgress.connectors.length > 0 && (
+                      <div className="space-y-3 mb-6">
+                        {setupProgress.connectors.map((connector) => (
+                          <div key={connector.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-2">
+                                <ConnectorIcon 
+                                  connectorId={connector.name.toLowerCase().replace(' connector', '').replace('-connector', '')} 
+                                  className="text-gray-600" 
+                                  size={20} 
+                                />
+                                {connector.status === 'healthy' ? (
+                                  <CheckCircle className="w-5 h-5 text-green-600" />
+                                ) : connector.status === 'checking' ? (
+                                  <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-red-600" />
+                                )}
+                              </div>
+                              <div>
+                                <h5 className="font-medium text-gray-900">
+                                  {connector.name.replace(' Connector', '').replace('-connector', '')}
+                                </h5>
+                                <p className="text-sm text-gray-500">Port {connector.port}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full border ${
+                                connector.status === 'healthy' ? 'status-healthy' : 
+                                connector.status === 'checking' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'status-error'
+                              }`}>
+                                {connector.status === 'checking' ? 'Checking...' : connector.status}
+                              </span>
+                              <button className="text-sm text-primary-600 hover:text-primary-700">
+                                Test
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Connector Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      {[
+                        { id: 'github', name: 'GitHub', description: 'Repositories & Issues' },
+                        { id: 'confluence', name: 'Confluence', description: 'Pages & Spaces' },
+                        { id: 'slack', name: 'Slack', description: 'Messages & Channels' },
+                        { id: 'retail-mock', name: 'Demo Data', description: 'Sample Products' }
+                      ].map((connector) => (
+                        <div
+                          key={connector.id}
+                          className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+                        >
+                          <div className="flex flex-col items-center text-center space-y-2">
+                            <ConnectorIcon 
+                              connectorId={connector.id} 
+                              className="text-blue-600" 
+                              size={32} 
+                            />
+                            <h5 className="font-medium text-gray-900">{connector.name}</h5>
+                            <p className="text-xs text-gray-500">{connector.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-4">
+                      Configure these through the dashboard after setup completion.
+                    </p>
+                    
                     <button
                       onClick={() => setCurrentStep(3)}
                       className="btn-primary"

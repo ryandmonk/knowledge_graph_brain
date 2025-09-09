@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, TestTube, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Save, TestTube, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../utils/api';
+import ConnectorIcon from './ConnectorIcon';
 
 interface ConnectorConfigProps {
   connectorId: string;
@@ -356,7 +357,7 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Settings className="w-6 h-6 text-blue-600" />
+              <ConnectorIcon connectorId={connectorId} className="text-blue-600" size={24} />
               <h2 className="text-xl font-semibold text-gray-900">
                 Configure {getConnectorDisplayName(connectorId)} Connector
               </h2>

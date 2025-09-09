@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./assets/logo.png" alt="Knowledge Graph Brain Logo" width="180"/>
 
-# 🧠 Knowledge Graph Brain
+# Knowledge Graph Brain
 </div>
 
 > **Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.**
