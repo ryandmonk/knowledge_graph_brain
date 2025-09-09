@@ -23,7 +23,14 @@ fi
 
 # Load environment to show current configuration
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
+    # More robust parsing that handles malformed lines
+    set -a  # automatically export all variables
+    source .env 2>/dev/null || {
+        echo -e "${YELLOW}⚠️  Warning: Some lines in .env may be malformed. Loading valid entries only.${NC}"
+        # Fallback: load only valid environment variables
+        export $(grep -E '^[A-Z_][A-Z0-9_]*=' .env | xargs) 2>/dev/null || true
+    }
+    set +a  # stop automatic export
 fi
 
 echo ""

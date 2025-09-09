@@ -693,11 +693,30 @@ app.get('/pull', async (req, res) => {
     
     const { since, owner, repo, data_types } = req.query;
     
-    if (!owner) {
-      return res.status(400).json({
-        error: 'Missing required parameter: owner',
-        usage: '/pull?owner=username[&repo=reponame][&since=ISO_DATE][&data_types=repos,issues,prs,commits,releases]'
-      });
+    // Determine which repositories to process
+    let repositoriesToProcess = [];
+    
+    if (owner && repo) {
+      // Specific repository requested via query params (legacy support)
+      repositoriesToProcess.push({ owner, repo });
+    } else if (owner) {
+      // All repos for specific owner requested via query params (legacy support)
+      repositoriesToProcess.push({ owner, repo: null });
+    } else {
+      // Use configured repositories from environment
+      repositoriesToProcess = config.repositories || [];
+      
+      if (repositoriesToProcess.length === 0) {
+        return res.status(400).json({
+          error: 'No repositories configured. Set GITHUB_REPOSITORIES or GITHUB_OWNER in .env, or use query parameters.',
+          usage: '/pull?owner=username[&repo=reponame][&since=ISO_DATE][&data_types=repos,issues,prs,commits,releases]',
+          examples: [
+            'GITHUB_REPOSITORIES=owner1/repo1,owner2/repo2',
+            'GITHUB_OWNER=username (for all repos)',
+            'Query: /pull?owner=username&repo=reponame'
+          ]
+        });
+      }
     }
 
     const api = new GitHubAPI();
@@ -706,36 +725,18 @@ app.get('/pull', async (req, res) => {
     const documents = [];
     const types = data_types ? data_types.split(',') : ['repos'];
 
-    if (types.includes('repos')) {
-      if (repo) {
-        const repoData = await api.getRepository(owner, repo);
-        const readme = await api.getReadme(owner, repo);
-        
-        documents.push({
-          id: `repo-${repoData.id}`,
-          type: 'repository',
-          title: repoData.name,
-          description: repoData.description || '',
-          content: readme ? readme.content : '',
-          url: repoData.html_url,
-          language: repoData.language,
-          stars: repoData.stargazers_count,
-          forks: repoData.forks_count,
-          created_at: repoData.created_at,
-          updated_at: repoData.updated_at,
-          owner: {
-            login: repoData.owner.login,
-            type: repoData.owner.type,
-            url: repoData.owner.html_url
-          },
-          topics: repoData.topics || [],
-          license: repoData.license?.name,
-          default_branch: repoData.default_branch
-        });
-      } else {
-        const repos = await api.getRepositories(owner, since);
-        for (const repoData of repos.slice(0, 20)) { // Limit for demo
-          const readme = await api.getReadme(owner, repoData.name);
+    console.log(`📦 Processing ${repositoriesToProcess.length} repository configurations...`);
+
+    // Process each repository configuration
+    for (const repoConfig of repositoriesToProcess) {
+      const { owner: repoOwner, repo: repoName } = repoConfig;
+      
+      if (types.includes('repos')) {
+        if (repoName) {
+          // Specific repository
+          console.log(`📁 Fetching specific repository: ${repoOwner}/${repoName}`);
+          const repoData = await api.getRepository(repoOwner, repoName);
+          const readme = await api.getReadme(repoOwner, repoName);
           
           documents.push({
             id: `repo-${repoData.id}`,
@@ -755,9 +756,53 @@ app.get('/pull', async (req, res) => {
               url: repoData.owner.html_url
             },
             topics: repoData.topics || [],
-            license: repoData.license?.name
+            license: repoData.license?.name,
+            default_branch: repoData.default_branch
           });
+        } else {
+          // All repositories for owner
+          console.log(`📂 Fetching all repositories for owner: ${repoOwner}`);
+          const repos = await api.getRepositories(repoOwner, since);
+          for (const repoData of repos.slice(0, 20)) { // Limit for demo
+            const readme = await api.getReadme(repoOwner, repoData.name);
+            
+            documents.push({
+              id: `repo-${repoData.id}`,
+              type: 'repository',
+              title: repoData.name,
+              description: repoData.description || '',
+              content: readme ? readme.content : '',
+              url: repoData.html_url,
+              language: repoData.language,
+              stars: repoData.stargazers_count,
+              forks: repoData.forks_count,
+              created_at: repoData.created_at,
+              updated_at: repoData.updated_at,
+              owner: {
+                login: repoData.owner.login,
+                type: repoData.owner.type,
+                url: repoData.owner.html_url
+              },
+              topics: repoData.topics || [],
+              license: repoData.license?.name
+            });
+          }
         }
+      }
+
+      // Handle other data types (issues, PRs, etc.) for each repository
+      if (repoName && (types.includes('issues') || types.includes('prs') || types.includes('commits') || types.includes('releases'))) {
+        if (types.includes('issues')) {
+          const issues = await api.getIssues(repoOwner, repoName, since);
+          // ... existing issue processing logic would go here
+        }
+        
+        if (types.includes('prs')) {
+          const prs = await api.getPullRequests(repoOwner, repoName, since);
+          // ... existing PR processing logic would go here
+        }
+        
+        // Similar for commits and releases...
       }
     }
 

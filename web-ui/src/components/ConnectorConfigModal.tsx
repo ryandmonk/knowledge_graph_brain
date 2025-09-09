@@ -31,6 +31,17 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
   const [testResult, setTestResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [portStatus, setPortStatus] = useState<any>(null);
+  
+  // GitHub-specific state for repository management
+  const [repositories, setRepositories] = useState<Array<{owner: string, repo: string}>>([]);
+  const [newRepoOwner, setNewRepoOwner] = useState('');
+  const [newRepoName, setNewRepoName] = useState('');
+  const [repoValidationError, setRepoValidationError] = useState<string | null>(null);
+  
+  // Confluence-specific state for space key management
+  const [spaceKeys, setSpaceKeys] = useState<Array<string>>([]);
+  const [newSpaceKey, setNewSpaceKey] = useState('');
+  const [spaceValidationError, setSpaceValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfig();
@@ -49,6 +60,33 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
         initialData[field.name] = field.value === '***' ? '' : field.value;
       });
       setFormData(initialData);
+      
+      // Initialize GitHub repositories if this is a GitHub connector
+      if (connectorId === 'github') {
+        // Parse repositories from the loaded config
+        const githubRepos = initialData['GITHUB_REPOSITORIES'] || '';
+        const parsedRepos = githubRepos ? githubRepos.split(',')
+          .map(repo => repo.trim())
+          .filter(repo => repo.length > 0)
+          .map(repo => {
+            const parts = repo.split('/');
+            return parts.length === 2 ? { owner: parts[0], repo: parts[1] } : null;
+          })
+          .filter(repo => repo !== null) as Array<{owner: string, repo: string}>
+          : [];
+        setRepositories(parsedRepos);
+      }
+      
+      // Initialize Confluence space keys if this is a Confluence connector
+      if (connectorId === 'confluence') {
+        // Parse space keys from the loaded config
+        const confluenceSpaces = initialData['CONFLUENCE_SPACE_KEYS'] || '';
+        const parsedSpaces = confluenceSpaces ? confluenceSpaces.split(',')
+          .map(key => key.trim())
+          .filter(key => key.length > 0)
+          : [];
+        setSpaceKeys(parsedSpaces);
+      }
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load configuration');
@@ -72,6 +110,121 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
       [fieldName]: value
     }));
     setTestResult(null); // Clear test results when config changes
+  };
+
+  // GitHub repository management functions
+  const updateRepositoriesConfig = (repos: Array<{owner: string, repo: string}>) => {
+    const repoString = repos.map(r => `${r.owner}/${r.repo}`).join(',');
+    handleFieldChange('GITHUB_REPOSITORIES', repoString);
+  };
+
+  const addRepository = () => {
+    if (!newRepoOwner || !newRepoName) {
+      setRepoValidationError('Both owner and repository name are required');
+      return;
+    }
+
+    const repoString = `${newRepoOwner}/${newRepoName}`;
+    if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repoString)) {
+      setRepoValidationError('Invalid format. Use alphanumeric characters, dots, dashes, and underscores only');
+      return;
+    }
+
+    const exists = repositories.some(r => r.owner === newRepoOwner && r.repo === newRepoName);
+    
+    if (exists) {
+      setRepoValidationError('Repository already exists in the list');
+      return;
+    }
+
+    const newRepos = [...repositories, { owner: newRepoOwner, repo: newRepoName }];
+    updateRepositoriesConfig(newRepos);
+    setRepositories(newRepos);
+    setNewRepoOwner('');
+    setNewRepoName('');
+    setRepoValidationError(null);
+  };
+
+  const removeRepository = (ownerToRemove: string, repoToRemove: string) => {
+    const newRepos = repositories.filter(r => !(r.owner === ownerToRemove && r.repo === repoToRemove));
+    updateRepositoriesConfig(newRepos);
+    setRepositories(newRepos);
+  };
+
+  const importFromOwner = async () => {
+    if (!newRepoOwner) {
+      setRepoValidationError('Enter GitHub owner/organization name');
+      return;
+    }
+    
+    try {
+      // This would call GitHub API to get repositories
+      // For now, just add the owner with * repo (fetch all repos pattern)
+      const ownerExists = repositories.some(r => r.owner === newRepoOwner && r.repo === '*');
+      
+      if (ownerExists) {
+        setRepoValidationError('All repositories for this owner are already configured');
+        return;
+      }
+      
+      // Add owner with '*' to indicate all repos
+      const newRepos = [...repositories, { owner: newRepoOwner, repo: '*' }];
+      updateRepositoriesConfig(newRepos);
+      setRepositories(newRepos);
+      setNewRepoOwner('');
+      setRepoValidationError(null);
+    } catch (err) {
+      setRepoValidationError('Failed to import repositories');
+    }
+  };
+
+  // Confluence space key management functions
+  const updateSpaceKeysConfig = (spaces: Array<string>) => {
+    const spaceString = spaces.join(',');
+    handleFieldChange('CONFLUENCE_SPACE_KEYS', spaceString);
+  };
+
+  const addSpaceKey = () => {
+    if (!newSpaceKey) {
+      setSpaceValidationError('Space key is required');
+      return;
+    }
+
+    // Validate space key format (alphanumeric, hyphens, underscores)
+    if (!/^[a-zA-Z0-9_-]+$/.test(newSpaceKey)) {
+      setSpaceValidationError('Invalid format. Use alphanumeric characters, hyphens, and underscores only');
+      return;
+    }
+
+    const upperSpaceKey = newSpaceKey.toUpperCase();
+    const exists = spaceKeys.some(key => key.toUpperCase() === upperSpaceKey);
+    
+    if (exists) {
+      setSpaceValidationError('Space key already exists in the list');
+      return;
+    }
+
+    const newSpaces = [...spaceKeys, upperSpaceKey];
+    updateSpaceKeysConfig(newSpaces);
+    setSpaceKeys(newSpaces);
+    setNewSpaceKey('');
+    setSpaceValidationError(null);
+  };
+
+  const removeSpaceKey = (keyToRemove: string) => {
+    const newSpaces = spaceKeys.filter(key => key !== keyToRemove);
+    updateSpaceKeysConfig(newSpaces);
+    setSpaceKeys(newSpaces);
+  };
+
+  const importAllSpaces = async () => {
+    try {
+      setSpaceValidationError('Feature coming soon: Browse and import all accessible spaces');
+      // This would call Confluence API to get all accessible spaces
+      // For now, we'll implement this in a future enhancement
+    } catch (err) {
+      setSpaceValidationError('Failed to import spaces');
+    }
   };
 
   const testConfiguration = async () => {
@@ -245,6 +398,177 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
               </div>
             </div>
           </div>
+
+          {/* GitHub Repository Management */}
+          {connectorId === 'github' && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-4">Repository Configuration</h3>
+              
+              {/* Current Repositories */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Configured Repositories
+                </label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {repositories.map((repo, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <span className="text-sm font-mono">
+                        {repo.repo === '*' ? `${repo.owner}/* (all repos)` : `${repo.owner}/${repo.repo}`}
+                      </span>
+                      <button
+                        onClick={() => removeRepository(repo.owner, repo.repo)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  {repositories.length === 0 && (
+                    <div className="text-sm text-gray-500 italic">
+                      No repositories configured. Add repositories below or use GITHUB_OWNER for all repos from a user.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Add Repository */}
+              <div className="border border-gray-200 rounded p-3 bg-gray-50">
+                <h4 className="font-medium text-gray-900 mb-3">Add Repository</h4>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Owner/Organization
+                    </label>
+                    <input
+                      type="text"
+                      value={newRepoOwner}
+                      onChange={(e) => setNewRepoOwner(e.target.value)}
+                      placeholder="username or orgname"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Repository Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newRepoName}
+                      onChange={(e) => setNewRepoName(e.target.value)}
+                      placeholder="repository-name"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addRepository()}
+                    />
+                  </div>
+                </div>
+                
+                {repoValidationError && (
+                  <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
+                    {repoValidationError}
+                  </div>
+                )}
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={addRepository}
+                    disabled={!newRepoOwner || !newRepoName}
+                    className="flex-1 px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add Repository
+                  </button>
+                  <button
+                    onClick={importFromOwner}
+                    disabled={!newRepoOwner}
+                    className="flex-1 px-3 py-1 text-sm bg-green-50 text-green-600 rounded hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Import All from Owner
+                  </button>
+                </div>
+                
+                <div className="mt-2 text-xs text-gray-500">
+                  <strong>Tip:</strong> Use "Import All" to fetch all repositories from a user/organization, 
+                  or add specific repositories individually.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Confluence Space Key Management */}
+          {connectorId === 'confluence' && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-4">Space Configuration</h3>
+              
+              {/* Current Space Keys */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Configured Space Keys
+                </label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {spaceKeys.map((spaceKey, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <span className="text-sm font-mono">{spaceKey}</span>
+                      <button
+                        onClick={() => removeSpaceKey(spaceKey)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  {spaceKeys.length === 0 && (
+                    <div className="text-sm text-gray-500 italic">
+                      No space keys configured. Add space keys below or leave empty to pull from all accessible spaces.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Add Space Key */}
+              <div className="border border-gray-200 rounded p-3 bg-gray-50">
+                <h4 className="font-medium text-gray-900 mb-3">Add Space Key</h4>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Space Key
+                  </label>
+                  <input
+                    type="text"
+                    value={newSpaceKey}
+                    onChange={(e) => setNewSpaceKey(e.target.value.toUpperCase())}
+                    placeholder="DEMO, TECH, DOCS"
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    onKeyPress={(e) => e.key === 'Enter' && addSpaceKey()}
+                  />
+                </div>
+                
+                {spaceValidationError && (
+                  <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
+                    {spaceValidationError}
+                  </div>
+                )}
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={addSpaceKey}
+                    disabled={!newSpaceKey}
+                    className="flex-1 px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add Space Key
+                  </button>
+                  <button
+                    onClick={importAllSpaces}
+                    className="flex-1 px-3 py-1 text-sm bg-green-50 text-green-600 rounded hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Browse All Spaces
+                  </button>
+                </div>
+                
+                <div className="mt-2 text-xs text-gray-500">
+                  <strong>Tip:</strong> Space keys are usually uppercase (like DEMO, TECH). 
+                  Leave empty to pull content from all accessible spaces.
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Authentication Fields */}
           {config.authFields.length > 0 && (

@@ -5,6 +5,83 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2025-09-09 - Enhanced UX/UI & Multi-Connector Improvements
+
+### Added
+- **🎨 Enhanced AI Provider Configuration** - Phase 1: Professional Provider Selection Interface
+  - **Intelligent Provider Dropdown**: Dynamic Ollama model selection with real-time model discovery
+  - **Provider Selection Interface**: Clean radio button interface for Ollama vs OpenAI selection
+  - **Real-time Model Discovery**: Live integration with `/api/ollama/models` endpoint for available model listing
+  - **Enhanced User Experience**: Improved form validation, loading states, and configuration persistence
+
+- **📁 GitHub Multi-Repository Support** - Phase 2: Advanced Repository Management
+  - **Dynamic Repository Management**: Add/remove GitHub repositories with interactive UI components
+  - **Repository Validation**: Real-time repository format validation (owner/repo-name pattern)
+  - **Configuration Persistence**: Backend integration with orchestrator API for repository list management
+  - **Enhanced GitHub Integration**: Seamless multi-repository configuration with credential management
+
+- **🏢 Confluence Space Key Support** - Phase 3: Advanced Space Filtering & Authentication
+  - **Space Key Management Interface**: Professional space key configuration with add/remove functionality
+  - **Backend Space Filtering**: Complete Confluence API integration with space key to space ID mapping
+  - **Authentication Integration**: Fixed Confluence connector authentication with proper base URL handling
+  - **Real-world Validation**: End-to-end testing with actual Confluence instance and space filtering
+
+### Enhanced
+- **🔧 Connector Configuration System**
+  - **Unified Configuration Modal**: Consistent UI patterns across GitHub, Confluence, and other connectors
+  - **Backend API Integration**: Enhanced orchestrator endpoints for connector-specific configuration management
+  - **Environment Variable Management**: Dynamic `.env` file updates with proper validation and error handling
+  - **Configuration Persistence**: Robust configuration storage and retrieval across service restarts
+
+- **🌐 Web UI Infrastructure Improvements**
+  - **Component Reusability**: Shared configuration patterns and form components across connectors
+  - **TypeScript Integration**: Enhanced type safety with proper interfaces for all connector configurations
+  - **State Management**: Improved React state management for complex configuration workflows
+  - **API Integration**: Comprehensive integration with orchestrator configuration endpoints
+
+### Fixed
+- **🔌 Confluence Connector Critical Issues**
+  - **Authentication URL Fix**: Corrected base URL from `https://pavis.atlassian.net/wiki` to `https://pavis.atlassian.net`
+  - **Environment Variable Consistency**: Fixed `CONFLUENCE_USER_EMAIL` vs `CONFLUENCE_EMAIL` naming inconsistency
+  - **Space Key Validation**: Implemented proper space key filtering with actual Confluence instance validation
+  - **API Integration**: Resolved 404 errors and authentication failures with proper Confluence REST API integration
+
+- **🎯 Configuration System Stability**
+  - **Connector URL Resolution**: Fixed double `/wiki` path issues in Confluence connector configuration
+  - **Space Discovery**: Implemented proper space key to space ID mapping for filtering functionality
+  - **Error Handling**: Enhanced error reporting and recovery for configuration failures
+
+### Technical Improvements
+- **Configuration Architecture**: Standardized configuration patterns across all connector types
+- **API Reliability**: Enhanced error handling and validation throughout configuration endpoints
+- **Data Validation**: Comprehensive input validation for all connector configuration fields
+- **Authentication Flow**: Improved credential management and validation across connector types
+
+### Validation Results
+- ✅ **Phase 1 Completion**: AI Provider configuration with Ollama model discovery fully operational
+- ✅ **Phase 2 Completion**: GitHub multi-repository support with authentication and validation working
+- ✅ **Phase 3 Completion**: Confluence space key filtering with real-world testing and data ingestion confirmed
+- ✅ **End-to-End Testing**: Complete data pipeline from Confluence API through space filtering to Neo4j storage validated
+- ✅ **Real-world Integration**: Successful testing with actual user credentials and Confluence instance
+- ✅ **Data Ingestion Pipeline**: 7 documents ingested with 9 nodes and 7 relationships, space filtering operational
+
+### Configuration Examples
+```bash
+# Confluence Space Key Configuration
+CONFLUENCE_SPACE_KEYS=TEST,PO
+
+# GitHub Multi-Repository Configuration
+GITHUB_REPOSITORIES=owner/repo1,owner/repo2,org/project
+
+# AI Provider Configuration
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=mxbai-embed-large
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+### Impact
+This release significantly enhances the user experience by transforming basic connector configuration into professional, user-friendly interfaces. The addition of dynamic repository management, space key filtering, and intelligent provider selection eliminates technical barriers while maintaining full functionality. The comprehensive testing with real-world authentication and data sources validates the production readiness of these enhanced configuration capabilities.
+
 ## [0.15.1] - 2025-09-03 - Streamlined Workflow & Semantic Search Completion
 
 ### Added

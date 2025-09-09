@@ -736,7 +736,8 @@ app.get('/api/connectors/:connectorId/config', (req: Request, res: Response) => 
       authFields: [
         { name: 'CONFLUENCE_BASE_URL', label: 'Confluence Domain', type: 'url', required: true, value: process.env.CONFLUENCE_BASE_URL || '', placeholder: 'https://your-domain.atlassian.net' },
         { name: 'CONFLUENCE_EMAIL', label: 'Email', type: 'email', required: true, value: process.env.CONFLUENCE_EMAIL || '' },
-        { name: 'CONFLUENCE_API_TOKEN', label: 'API Token', type: 'password', required: true, value: process.env.CONFLUENCE_API_TOKEN ? '***' : '' }
+        { name: 'CONFLUENCE_API_TOKEN', label: 'API Token', type: 'password', required: true, value: process.env.CONFLUENCE_API_TOKEN ? '***' : '' },
+        { name: 'CONFLUENCE_SPACE_KEYS', label: 'Space Keys (comma-separated)', type: 'text', required: false, value: process.env.CONFLUENCE_SPACE_KEYS || '', placeholder: 'DEMO,TECH,DOCS (leave empty for all spaces)' }
       ]
     },
     'retail-mock': {

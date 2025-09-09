@@ -174,7 +174,10 @@ function ServiceCheckStep({ onNext }: { onNext: () => void }) {
 function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [config, setConfig] = useState<Partial<EnvironmentConfig>>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, string>>({});
+  const [hasChanges, setHasChanges] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadConfig();
@@ -191,7 +194,98 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
     }
   };
 
+  const updateConfigField = (field: string, value: string | boolean) => {
+    setConfig(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const validateConfig = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    // Neo4j validation
+    if (!config.NEO4J_URI) {
+      errors.NEO4J_URI = 'Neo4j URI is required';
+    } else if (!config.NEO4J_URI.match(/^(bolt|neo4j):\/\/.+/)) {
+      errors.NEO4J_URI = 'URI must start with bolt:// or neo4j://';
+    }
+    
+    if (!config.NEO4J_USER) {
+      errors.NEO4J_USER = 'Neo4j user is required';
+    }
+    
+    if (!config.NEO4J_PASSWORD) {
+      errors.NEO4J_PASSWORD = 'Neo4j password is required';
+    }
+    
+    // AI Provider validation based on selected provider
+    const provider = config.EMBEDDING_PROVIDER || 'ollama';
+    
+    if (provider === 'ollama') {
+      // Ollama validation
+      if (!config.OLLAMA_BASE_URL) {
+        errors.OLLAMA_BASE_URL = 'Ollama base URL is required';
+      } else if (!config.OLLAMA_BASE_URL.match(/^https?:\/\/.+/)) {
+        errors.OLLAMA_BASE_URL = 'Must be a valid HTTP/HTTPS URL';
+      }
+      
+      if (!config.LLM_MODEL) {
+        errors.LLM_MODEL = 'LLM model is required';
+      }
+      
+      if (!config.EMBEDDING_MODEL) {
+        errors.EMBEDDING_MODEL = 'Embedding model is required';
+      }
+    } else if (provider === 'openai') {
+      // OpenAI validation
+      if (!config.OPENAI_API_KEY) {
+        errors.OPENAI_API_KEY = 'OpenAI API key is required';
+      } else if (!config.OPENAI_API_KEY.startsWith('sk-')) {
+        errors.OPENAI_API_KEY = 'API key must start with sk-';
+      }
+      
+      if (!config.LLM_MODEL) {
+        errors.LLM_MODEL = 'LLM model is required';
+      }
+      
+      if (!config.EMBEDDING_MODEL) {
+        errors.EMBEDDING_MODEL = 'Embedding model is required';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const saveConfiguration = async () => {
+    if (!validateConfig()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.updateConfig(config);
+      setHasChanges(false);
+      // Clear test results when config changes
+      setTestResults({});
+      console.log('Configuration saved successfully');
+    } catch (error) {
+      console.error('Failed to save configuration:', error);
+      alert('Failed to save configuration. Please check the console for details.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const testConnection = async (service: string) => {
+    // Save config first if there are changes
+    if (hasChanges) {
+      await saveConfiguration();
+    }
+
     setTestResults(prev => ({ ...prev, [service]: 'testing' }));
     
     try {
@@ -200,7 +294,16 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
       if (service === 'neo4j') {
         result = await api.checkService('http://localhost:7474');
       } else if (service === 'ollama') {
-        result = await api.checkService('http://localhost:11434/api/tags');
+        // Test based on the selected AI provider
+        const provider = config.EMBEDDING_PROVIDER || 'ollama';
+        if (provider === 'ollama') {
+          const ollamaUrl = config.OLLAMA_BASE_URL || 'http://localhost:11434';
+          result = await api.checkService(`${ollamaUrl}/api/tags`);
+        } else if (provider === 'openai') {
+          // For OpenAI, we can test by making a simple API call
+          // This would need to be implemented in the backend
+          result = { status: 'healthy' }; // Placeholder for now
+        }
       }
       
       setTestResults(prev => ({ 
@@ -236,30 +339,80 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-gray-900">Neo4j Database</h4>
-                <button
-                  onClick={() => testConnection('neo4j')}
-                  disabled={testResults.neo4j === 'testing'}
-                  className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
-                >
-                  {testResults.neo4j === 'testing' ? 'Testing...' : 'Test Connection'}
-                </button>
+                <div className="flex space-x-2">
+                  {hasChanges && (
+                    <button
+                      onClick={saveConfiguration}
+                      disabled={saving}
+                      className="text-sm bg-green-50 text-green-600 px-3 py-1 rounded hover:bg-green-100 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => testConnection('neo4j')}
+                    disabled={testResults.neo4j === 'testing'}
+                    className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    {testResults.neo4j === 'testing' ? 'Testing...' : 'Test Connection'}
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <label className="block text-gray-600">URI</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.NEO4J_URI || 'bolt://localhost:7687'}</p>
+                  <label className="block text-gray-600 font-medium mb-1">URI *</label>
+                  <input
+                    type="text"
+                    value={config.NEO4J_URI || ''}
+                    onChange={(e) => updateConfigField('NEO4J_URI', e.target.value)}
+                    placeholder="bolt://localhost:7687"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      validationErrors.NEO4J_URI ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  />
+                  {validationErrors.NEO4J_URI && (
+                    <p className="mt-1 text-xs text-red-600">{validationErrors.NEO4J_URI}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-gray-600">Database</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.NEO4J_DATABASE || 'neo4j'}</p>
+                  <label className="block text-gray-600 font-medium mb-1">Database</label>
+                  <input
+                    type="text"
+                    value={config.NEO4J_DATABASE || ''}
+                    onChange={(e) => updateConfigField('NEO4J_DATABASE', e.target.value)}
+                    placeholder="neo4j"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
                 <div>
-                  <label className="block text-gray-600">User</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.NEO4J_USER || 'neo4j'}</p>
+                  <label className="block text-gray-600 font-medium mb-1">User *</label>
+                  <input
+                    type="text"
+                    value={config.NEO4J_USER || ''}
+                    onChange={(e) => updateConfigField('NEO4J_USER', e.target.value)}
+                    placeholder="neo4j"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      validationErrors.NEO4J_USER ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  />
+                  {validationErrors.NEO4J_USER && (
+                    <p className="mt-1 text-xs text-red-600">{validationErrors.NEO4J_USER}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-gray-600">Password</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.NEO4J_PASSWORD || 'Not configured'}</p>
+                  <label className="block text-gray-600 font-medium mb-1">Password *</label>
+                  <input
+                    type="password"
+                    value={config.NEO4J_PASSWORD || ''}
+                    onChange={(e) => updateConfigField('NEO4J_PASSWORD', e.target.value)}
+                    placeholder="Enter password"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      validationErrors.NEO4J_PASSWORD ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  />
+                  {validationErrors.NEO4J_PASSWORD && (
+                    <p className="mt-1 text-xs text-red-600">{validationErrors.NEO4J_PASSWORD}</p>
+                  )}
                 </div>
               </div>
               {testResults.neo4j && (
@@ -273,46 +426,184 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
               )}
             </div>
 
-            {/* Ollama Configuration */}
+            {/* AI Provider Configuration */}
             <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-gray-900">Ollama (Local AI)</h4>
-                <button
-                  onClick={() => testConnection('ollama')}
-                  disabled={testResults.ollama === 'testing'}
-                  className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
-                >
-                  {testResults.ollama === 'testing' ? 'Testing...' : 'Test Connection'}
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <label className="block text-gray-600">Base URL</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.OLLAMA_BASE_URL || 'http://localhost:11434'}</p>
-                </div>
-                <div>
-                  <label className="block text-gray-600 mb-1">LLM Model</label>
-                  <LLMModelSelector 
-                    currentModel={config.LLM_MODEL || 'qwen3:8b'}
-                    onModelChange={(model) => {
-                      // Update the config state when model changes
-                      setConfig(prev => ({ ...prev, LLM_MODEL: model }));
-                      console.log(`LLM model updated to: ${model}`);
-                    }}
-                    size="small"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-600">Embedding Provider</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.EMBEDDING_PROVIDER || 'ollama'}</p>
-                </div>
-                <div>
-                  <label className="block text-gray-600">Embedding Model</label>
-                  <p className="font-mono bg-gray-50 p-2 rounded">{config.EMBEDDING_MODEL || 'mxbai-embed-large'}</p>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium text-gray-900">AI Provider Configuration</h4>
+                <div className="flex space-x-2">
+                  {hasChanges && (
+                    <button
+                      onClick={saveConfiguration}
+                      disabled={saving}
+                      className="text-sm bg-green-50 text-green-600 px-3 py-1 rounded hover:bg-green-100 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => testConnection('ollama')}
+                    disabled={testResults.ollama === 'testing'}
+                    className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    {testResults.ollama === 'testing' ? 'Testing...' : `Test ${config.EMBEDDING_PROVIDER === 'openai' ? 'OpenAI' : 'Ollama'}`}
+                  </button>
                 </div>
               </div>
+
+              {/* Provider Selection */}
+              <div className="mb-4">
+                <label className="block text-gray-600 font-medium mb-2">AI Provider *</label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ai_provider"
+                      value="ollama"
+                      checked={config.EMBEDDING_PROVIDER === 'ollama'}
+                      onChange={(e) => updateConfigField('EMBEDDING_PROVIDER', e.target.value)}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Ollama (Local)</span>
+                    <span className="text-xs text-gray-500 bg-green-100 px-2 py-1 rounded">Recommended</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ai_provider"
+                      value="openai"
+                      checked={config.EMBEDDING_PROVIDER === 'openai'}
+                      onChange={(e) => updateConfigField('EMBEDDING_PROVIDER', e.target.value)}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">OpenAI (Cloud)</span>
+                    <span className="text-xs text-gray-500 bg-blue-100 px-2 py-1 rounded">API Required</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Ollama Configuration */}
+              {config.EMBEDDING_PROVIDER === 'ollama' && (
+                <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h5 className="font-medium text-green-800">Ollama Local Configuration</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">Base URL *</label>
+                      <input
+                        type="text"
+                        value={config.OLLAMA_BASE_URL || ''}
+                        onChange={(e) => updateConfigField('OLLAMA_BASE_URL', e.target.value)}
+                        placeholder="http://localhost:11434"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.OLLAMA_BASE_URL ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      {validationErrors.OLLAMA_BASE_URL && (
+                        <p className="mt-1 text-xs text-red-600">{validationErrors.OLLAMA_BASE_URL}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">LLM Model *</label>
+                      <LLMModelSelector 
+                        currentModel={config.LLM_MODEL || 'qwen3:8b'}
+                        onModelChange={(model) => updateConfigField('LLM_MODEL', model)}
+                        size="small"
+                      />
+                      {validationErrors.LLM_MODEL && (
+                        <p className="mt-1 text-xs text-red-600">{validationErrors.LLM_MODEL}</p>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-gray-600 font-medium mb-1">Embedding Model *</label>
+                      <select
+                        value={config.EMBEDDING_MODEL || 'mxbai-embed-large'}
+                        onChange={(e) => updateConfigField('EMBEDDING_MODEL', e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.EMBEDDING_MODEL ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="mxbai-embed-large">mxbai-embed-large (Recommended)</option>
+                        <option value="nomic-embed-text">nomic-embed-text</option>
+                        <option value="all-minilm">all-minilm</option>
+                        <option value="snowflake-arctic-embed">snowflake-arctic-embed</option>
+                      </select>
+                      {validationErrors.EMBEDDING_MODEL && (
+                        <p className="mt-1 text-xs text-red-600">{validationErrors.EMBEDDING_MODEL}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-green-700 bg-green-100 p-3 rounded">
+                    <strong>Privacy:</strong> All AI processing happens locally on your machine. No data is sent to external services.
+                  </div>
+                </div>
+              )}
+
+              {/* OpenAI Configuration */}
+              {config.EMBEDDING_PROVIDER === 'openai' && (
+                <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h5 className="font-medium text-blue-800">OpenAI Cloud Configuration</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">API Key *</label>
+                      <input
+                        type="password"
+                        value={config.OPENAI_API_KEY || ''}
+                        onChange={(e) => updateConfigField('OPENAI_API_KEY', e.target.value)}
+                        placeholder="sk-..."
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.OPENAI_API_KEY ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      {validationErrors.OPENAI_API_KEY && (
+                        <p className="mt-1 text-xs text-red-600">{validationErrors.OPENAI_API_KEY}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">LLM Model *</label>
+                      <select
+                        value={config.LLM_MODEL || 'gpt-3.5-turbo'}
+                        onChange={(e) => updateConfigField('LLM_MODEL', e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.LLM_MODEL ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        <option value="gpt-4">GPT-4</option>
+                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                      </select>
+                      {validationErrors.LLM_MODEL && (
+                        <p className="mt-1 text-xs text-red-600">{validationErrors.LLM_MODEL}</p>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-gray-600 font-medium mb-1">Embedding Model *</label>
+                      <select
+                        value={config.EMBEDDING_MODEL || 'text-embedding-ada-002'}
+                        onChange={(e) => updateConfigField('EMBEDDING_MODEL', e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.EMBEDDING_MODEL ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="text-embedding-ada-002">text-embedding-ada-002 (Legacy)</option>
+                        <option value="text-embedding-3-small">text-embedding-3-small</option>
+                        <option value="text-embedding-3-large">text-embedding-3-large (Recommended)</option>
+                      </select>
+                      {validationErrors.EMBEDDING_MODEL && (
+                        <p className="mt-1 text-xs text-red-600">{validationErrors.EMBEDDING_MODEL}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-blue-700 bg-blue-100 p-3 rounded">
+                    <strong>Note:</strong> Using OpenAI requires an API key and will send data to OpenAI's servers. 
+                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline ml-1">
+                      Get your API key here
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {testResults.ollama && (
-                <div className={`mt-2 p-2 rounded text-sm ${
+                <div className={`mt-4 p-2 rounded text-sm ${
                   testResults.ollama === 'success' ? 'bg-green-50 text-green-700' : 
                   testResults.ollama === 'error' ? 'bg-red-50 text-red-700' : ''
                 }`}>

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const { config, parseSpaceKeys } = require('./config.js');
 
 const app = express();
 const port = 3004;
@@ -12,7 +13,7 @@ app.use(express.json());
 // Confluence API configuration
 const CONFLUENCE_BASE_URL = process.env.CONFLUENCE_BASE_URL || 'https://your-domain.atlassian.net';
 const CONFLUENCE_API_TOKEN = process.env.CONFLUENCE_API_TOKEN;
-const CONFLUENCE_USER_EMAIL = process.env.CONFLUENCE_USER_EMAIL;
+const CONFLUENCE_USER_EMAIL = process.env.CONFLUENCE_EMAIL;
 
 class ConfluenceAPI {
   constructor() {
@@ -366,18 +367,69 @@ app.get('/pull', async (req, res) => {
     
     const types = data_types.split(',').map(t => t.trim());
     const results = [];
+    
+    // Get configured space keys for filtering
+    const configuredSpaceKeys = parseSpaceKeys();
+    console.log('📁 Space filtering:', configuredSpaceKeys.length > 0 ? 
+      `Filtering to spaces: ${configuredSpaceKeys.join(', ')}` : 
+      'No space filtering (pulling from all accessible spaces)');
+      
+    // If we have space keys configured, we need to convert them to space IDs for API filtering
+    let spaceIdsForFiltering = [];
+    if (configuredSpaceKeys.length > 0) {
+      try {
+        const spacesData = await confluenceAPI.getSpaces({ limit: 250 }); // Get more spaces to find matches
+        if (spacesData.results) {
+          spaceIdsForFiltering = spacesData.results
+            .filter(space => configuredSpaceKeys.includes(space.key))
+            .map(space => space.id);
+          
+          const foundKeys = spacesData.results
+            .filter(space => configuredSpaceKeys.includes(space.key))
+            .map(space => space.key);
+          
+          console.log(`🔍 Found ${spaceIdsForFiltering.length} matching spaces: ${foundKeys.join(', ')}`);
+          
+          const missingKeys = configuredSpaceKeys.filter(key => !foundKeys.includes(key));
+          if (missingKeys.length > 0) {
+            console.warn(`⚠️  Could not find spaces with keys: ${missingKeys.join(', ')}`);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error fetching spaces for filtering:', error.message);
+        console.log('🔄 Continuing without space filtering...');
+      }
+    }
 
     for (const type of types) {
       try {
         let data;
         const options = { limit: parseInt(limit), cursor };
-        if (space_id) options.spaceId = space_id;
+        
+        // Apply space filtering if configured
+        if (space_id) {
+          // Query parameter takes precedence
+          options.spaceId = space_id;
+        } else if (spaceIdsForFiltering.length > 0) {
+          // Use configured space IDs for filtering content
+          options.spaceId = spaceIdsForFiltering;
+        }
 
         switch (type) {
           case 'spaces':
+            // For spaces, get all but filter results by configured space keys
             data = await confluenceAPI.getSpaces(options);
             if (data.results) {
-              results.push(...data.results.map(space => ({
+              let spacesToInclude = data.results;
+              
+              // Filter by configured space keys if specified
+              if (configuredSpaceKeys.length > 0) {
+                spacesToInclude = spacesToInclude.filter(space => 
+                  configuredSpaceKeys.includes(space.key)
+                );
+              }
+              
+              results.push(...spacesToInclude.map(space => ({
                 id: `space-${space.id}`,
                 title: space.name,
                 content: `${space.name}\n${space.description?.plain || ''}`,
@@ -569,6 +621,6 @@ app.listen(port, () => {
     console.log(`⚠️  Configure environment variables:`);
     console.log(`   CONFLUENCE_BASE_URL=https://your-domain.atlassian.net`);
     console.log(`   CONFLUENCE_API_TOKEN=your-api-token`);
-    console.log(`   CONFLUENCE_USER_EMAIL=your-email@example.com`);
+    console.log(`   CONFLUENCE_EMAIL=your-email@example.com`);
   }
 });
