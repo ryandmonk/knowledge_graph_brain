@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { api, type SystemStatus } from '../utils/api';
 import { QueryModal } from './QueryModal';
+import { ConnectorBuilderModal } from './custom-connectors';
+import { SystemMonitor } from './monitoring';
+import { ConfigurationTesting, ServiceManager, ConfigurationAudit, SecurityDashboard, AccessControl } from './setup';
 
 export function Dashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'testing' | 'services' | 'audit' | 'security' | 'access'>('overview');
   const [queryModal, setQueryModal] = useState<{ isOpen: boolean; kb_id: string; kb_name: string }>({
     isOpen: false,
     kb_id: '',
     kb_name: ''
   });
+  const [connectorBuilderModal, setConnectorBuilderModal] = useState(false);
 
   useEffect(() => {
     loadSystemStatus();
@@ -76,6 +81,99 @@ export function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'overview'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            System Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('monitoring')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'monitoring'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Real-Time Monitoring
+          </button>
+          <button
+            onClick={() => setActiveTab('testing')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'testing'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Configuration Testing
+          </button>
+          <button
+            onClick={() => setActiveTab('services')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'services'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Service Management
+          </button>
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'audit'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Configuration Audit
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'security'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Security Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('access')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'access'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Access Control
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'monitoring' ? (
+        <SystemMonitor />
+      ) : activeTab === 'testing' ? (
+        <ConfigurationTesting />
+      ) : activeTab === 'services' ? (
+        <ServiceManager />
+      ) : activeTab === 'audit' ? (
+        <ConfigurationAudit />
+      ) : activeTab === 'security' ? (
+        <SecurityDashboard />
+      ) : activeTab === 'access' ? (
+        <AccessControl />
+      ) : (
+        <>
+          {/* Existing Dashboard Content */}
 
       {systemStatus && (
         <>
@@ -162,6 +260,12 @@ export function Dashboard() {
             <div className="card p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
               <div className="space-y-3">
+                <button 
+                  onClick={() => setConnectorBuilderModal(true)}
+                  className="w-full btn-primary"
+                >
+                  🚀 Create Custom Connector
+                </button>
                 <button className="w-full btn-primary">
                   Run System Diagnostics
                 </button>
@@ -338,6 +442,19 @@ export function Dashboard() {
         kb_id={queryModal.kb_id}
         kb_name={queryModal.kb_name}
       />
+
+      {/* Connector Builder Modal */}
+      <ConnectorBuilderModal
+        isOpen={connectorBuilderModal}
+        onClose={() => setConnectorBuilderModal(false)}
+        onConnectorCreated={(connector) => {
+          console.log('New connector created:', connector);
+          // Refresh system status to show new connector
+          loadSystemStatus();
+        }}
+      />
+        </>
+      )}
     </div>
   );
 }

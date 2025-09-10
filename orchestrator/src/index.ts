@@ -1,6 +1,7 @@
 // Update the main index.ts file to integrate all components
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import http from 'http';
 import { server, registeredSchemas } from './capabilities';
 import { initDriver, setupKB, mergeNodesAndRels, executeCypher, getDriver, semanticSearch } from './ingest';
 import { parseSchema, applyMapping } from './dsl';
@@ -85,6 +86,31 @@ app.use('/api/auth', authRouter);
 
 // Custom Connector routes
 app.use('/api/custom-connectors', customConnectorRouter);
+
+// Advanced Configuration routes
+import configAdvancedRouter from './routes/config-advanced';
+app.use('/api/config', configAdvancedRouter);
+
+// Monitoring routes
+import monitoringRouter from './routes/monitoring';
+import { monitoringService } from './services/monitoring';
+app.use('/api/monitoring', monitoringRouter);
+
+// Configuration Testing routes
+import configTestingRouter from './routes/config-testing';
+app.use('/api/config', configTestingRouter);
+
+// Service Management routes
+import servicesRouter from './routes/services';
+app.use('/api/services', servicesRouter);
+
+// Audit routes
+import { auditRouter } from './routes/audit';
+app.use('/api/audit', auditRouter);
+
+// Security routes
+import { securityRouter } from './routes/security';
+app.use('/api/security', securityRouter);
 
 // Serve static files from the web UI build
 const webUIPath = path.join(__dirname, '../../web-ui/dist');
@@ -1195,9 +1221,16 @@ app.post('/api/ask', async (req: Request, res: Response) => {
   }
 });
 
-app.listen(getConfig().PORT, () => {
+// Create HTTP server for WebSocket support
+const httpServer = http.createServer(app);
+
+// Initialize monitoring service with WebSocket support
+monitoringService.initialize(httpServer);
+
+httpServer.listen(getConfig().PORT, () => {
   const config = getConfig();
   console.log(`🚀 Knowledge Graph Brain Orchestrator running on http://localhost:${config.PORT}`);
+  console.log(`📊 Real-time monitoring available at ws://localhost:${config.PORT}/ws/monitoring`);
   if (config.DEMO_MODE) {
     console.log('🎭 Running in DEMO MODE - using mock data where credentials are missing');
   }
