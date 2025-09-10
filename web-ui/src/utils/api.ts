@@ -319,6 +319,163 @@ class KnowledgeGraphAPI {
     });
   }
 
+  // Custom Connector Management
+  async parseOpenAPISpec(params: {
+    spec_content: string;
+    kb_id: string;
+    connector_url?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    generated_schema: any;
+    validation_warnings?: any[];
+    api_info: {
+      title: string;
+      version: string;
+      description?: string;
+      endpoints_found: number;
+      schemas_found: number;
+    };
+  }> {
+    const response = await this.client.post('/api/custom-connectors/parse-openapi', params);
+    return response.data;
+  }
+
+  async parseOpenAPISpecEnhanced(params: {
+    spec_content: string;
+    kb_id: string;
+    connector_url?: string;
+    context?: {
+      domain?: string;
+      businessGoals?: string[];
+      existingKnowledgeGraphs?: string[];
+    };
+  }): Promise<{
+    success: boolean;
+    message: string;
+    generated_schema: any;
+    validation_warnings?: any[];
+    llm_insights: {
+      confidence: number;
+      enhanced_nodes: number;
+      intelligent_relationships: number;
+      field_suggestions: number;
+      optimizations: number;
+    };
+    api_info: {
+      title: string;
+      version: string;
+      description?: string;
+      endpoints_found: number;
+      schemas_found: number;
+    };
+  }> {
+    // Determine timeout based on spec size - large specs need more time
+    const specSizeKB = params.spec_content.length / 1024;
+    let timeout = 180000; // 3 minutes default
+    
+    if (specSizeKB > 2000) { // >2MB specs like Jira
+      timeout = 600000; // 10 minutes for very large specs
+    } else if (specSizeKB > 500) { // >500KB specs  
+      timeout = 300000; // 5 minutes for large specs
+    }
+    
+    console.log(`🕐 Using ${timeout/1000}s timeout for ${Math.round(specSizeKB)}KB OpenAPI spec`);
+    
+    const response = await this.client.post('/api/custom-connectors/parse-openapi-enhanced', params, {
+      timeout: timeout
+    });
+    return response.data;
+  }
+
+  async analyzeRestAPI(params: {
+    api_url: string;
+    kb_id: string;
+    auth_config?: any;
+    sample_endpoints?: string[];
+    context?: {
+      domain?: string;
+      businessGoals?: string[];
+    };
+  }): Promise<{
+    success: boolean;
+    message: string;
+    generated_schema: any;
+    validation_warnings?: any[];
+    analysis_insights: {
+      confidence: number;
+      discovered_entities: number;
+      inferred_relationships: number;
+      field_mappings: number;
+      optimization_opportunities: number;
+    };
+    recommendations: Array<{
+      type: string;
+      description: string;
+      impact: 'high' | 'medium' | 'low';
+    }>;
+  }> {
+    // Use extended timeout for REST API analysis with LLM
+    const response = await this.client.post('/api/custom-connectors/analyze-rest-api', params, {
+      timeout: 720000 // 12 minutes for LLM analysis
+    });
+    return response.data;
+  }
+
+  async registerCustomConnectorSchema(params: {
+    schema_yaml: string;
+    kb_id: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    kb_id: string;
+    validation_warnings?: any[];
+    schema_summary: {
+      nodes: number;
+      relationships: number;
+      sources: number;
+    };
+  }> {
+    const response = await this.client.post('/api/custom-connectors/register', params);
+    return response.data;
+  }
+
+  async getCustomConnectors(): Promise<{
+    success: boolean;
+    custom_connectors: Array<{
+      kb_id: string;
+      name: string;
+      version: string;
+      description?: string;
+      created_from: string;
+      nodes_count: number;
+      relationships_count: number;
+      sources_count: number;
+    }>;
+    total_count: number;
+  }> {
+    const response = await this.client.get('/api/custom-connectors');
+    return response.data;
+  }
+
+  async getCustomConnector(kb_id: string): Promise<{
+    success: boolean;
+    kb_id: string;
+    schema: any;
+    schema_yaml: string;
+  }> {
+    const response = await this.client.get(`/api/custom-connectors/${kb_id}`);
+    return response.data;
+  }
+
+  async deleteCustomConnector(kb_id: string): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    const response = await this.client.delete(`/api/custom-connectors/${kb_id}`);
+    return response.data;
+  }
+
   // Utility methods
   private getServiceName(url: string): string {
     if (url.includes('7474')) return 'Neo4j';

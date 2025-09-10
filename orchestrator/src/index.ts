@@ -16,6 +16,9 @@ import fs from 'fs';
 // Authentication integration
 import { authRouter, initAuthService, getAuthMiddleware, requirePermission, requireKBAccess } from './auth/routes';
 
+// Custom Connector integration
+import customConnectorRouter from './routes/custom-connectors';
+
 // GraphRAG Agent Integration
 let GraphRAGAgent: any;
 let createGraphRAGAgent: any;
@@ -73,10 +76,15 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+// Increase body size limits for large OpenAPI specifications
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Authentication routes (public access for API key management)
 app.use('/api/auth', authRouter);
+
+// Custom Connector routes
+app.use('/api/custom-connectors', customConnectorRouter);
 
 // Serve static files from the web UI build
 const webUIPath = path.join(__dirname, '../../web-ui/dist');

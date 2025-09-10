@@ -1,11 +1,13 @@
 import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, RefreshCw, Settings, Database, Link, CheckSquare } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Settings, Database, Link, CheckSquare, Plus, Globe } from 'lucide-react';
 import { api, type EnvironmentConfig } from '../utils/api';
 import ConnectorConfigModal from './ConnectorConfigModal';
 import ConnectorIcon from './ConnectorIcon';
 import DemoModeToggle from './DemoModeToggle';
 import { LLMModelSelector } from './LLMModelSelector';
+import { SchemaUploadModal } from './SchemaUploadModal';
+import { RestAPIAnalyzerModal } from './RestAPIAnalyzerModal';
 
 interface StepProps {
   isActive: boolean;
@@ -646,9 +648,13 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
   const [loading, setLoading] = useState(true);
   const [testResults, setTestResults] = useState<Record<string, string>>({});
   const [configModalOpen, setConfigModalOpen] = useState<string | null>(null);
+  const [schemaUploadModalOpen, setSchemaUploadModalOpen] = useState(false);
+  const [restAPIAnalyzerOpen, setRestAPIAnalyzerOpen] = useState(false);
+  const [customConnectors, setCustomConnectors] = useState<any[]>([]);
 
   useEffect(() => {
     loadConnectors();
+    loadCustomConnectors();
   }, []);
 
   const loadConnectors = async () => {
@@ -659,6 +665,15 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
       console.error('Failed to load connectors:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCustomConnectors = async () => {
+    try {
+      const data = await api.getCustomConnectors();
+      setCustomConnectors(data.custom_connectors || []);
+    } catch (error) {
+      console.error('Failed to load custom connectors:', error);
     }
   };
 
@@ -691,6 +706,12 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
     }
   };
 
+  const handleSchemaRegistered = (kb_id: string) => {
+    console.log(`Custom connector registered: ${kb_id}`);
+    // Reload custom connectors after registration
+    loadCustomConnectors();
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center">
@@ -710,51 +731,126 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
           <h3 className="text-lg font-medium text-gray-900">Data Connectors</h3>
           <p className="text-sm text-gray-500 mt-1">Choose and configure data sources for your knowledge graph</p>
           
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {connectors.map((connector) => (
-              <div key={connector.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <ConnectorIcon 
-                      connectorId={connector.id} 
-                      className="text-blue-600" 
-                      size={28} 
-                    />
-                    <div>
-                      <h4 className="font-medium text-gray-900">{connector.name}</h4>
-                      <p className="text-xs text-gray-500">Port {connector.port}</p>
+          {/* Custom Connectors Section */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-md font-medium text-gray-900">Custom Connectors</h4>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setSchemaUploadModalOpen(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>OpenAPI</span>
+                </button>
+                <button
+                  onClick={() => setRestAPIAnalyzerOpen(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>Live API</span>
+                </button>
+              </div>
+            </div>
+
+            {customConnectors.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {customConnectors.map((connector) => (
+                  <div key={connector.kb_id} className="border border-green-200 bg-green-50 rounded-lg p-4">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <Database className="w-6 h-6 text-green-600" />
+                      <div>
+                        <h5 className="font-medium text-gray-900">{connector.name}</h5>
+                        <p className="text-xs text-gray-500">{connector.kb_id}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {connector.nodes_count} nodes, {connector.relationships_count} relationships
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
+                        Custom ({connector.created_from})
+                      </span>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => openConfigModal(connector.id)}
-                      className="text-sm bg-gray-50 text-gray-600 px-3 py-1 rounded hover:bg-gray-100"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => testConnector(connector.id)}
-                      disabled={testResults[connector.id] === 'testing'}
-                      className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
-                    >
-                      {testResults[connector.id] === 'testing' ? 'Testing...' : 'Test'}
-                    </button>
-                  </div>
-                </div>
-                
-                <p className="text-sm text-gray-600 mb-4">{connector.description}</p>
-                
-                {testResults[connector.id] && (
-                  <div className={`p-2 rounded text-sm ${
-                    testResults[connector.id] === 'success' ? 'bg-green-50 text-green-700' : 
-                    testResults[connector.id] === 'error' ? 'bg-red-50 text-red-700' : ''
-                  }`}>
-                    {testResults[connector.id] === 'success' ? '✅ Connector available' : 
-                     testResults[connector.id] === 'error' ? '❌ Connector unavailable' : ''}
-                  </div>
-                )}
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center mb-6">
+                <Database className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 mb-3">No custom connectors created yet</p>
+                <div className="flex justify-center space-x-3">
+                  <button
+                    onClick={() => setSchemaUploadModalOpen(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create from OpenAPI spec →</span>
+                  </button>
+                  <span className="text-gray-400">|</span>
+                  <button
+                    onClick={() => setRestAPIAnalyzerOpen(true)}
+                    className="text-sm text-green-600 hover:text-green-800 flex items-center space-x-1"
+                  >
+                    <Globe className="w-4 h-4" />
+                    <span>Analyze live REST API →</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <hr className="border-gray-200 mb-6" />
+          </div>
+
+          {/* Built-in Connectors Section */}
+          <div>
+            <h4 className="text-md font-medium text-gray-900 mb-4">Built-in Connectors</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {connectors.map((connector) => (
+                <div key={connector.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <ConnectorIcon 
+                        connectorId={connector.id} 
+                        className="text-blue-600" 
+                        size={28} 
+                      />
+                      <div>
+                        <h4 className="font-medium text-gray-900">{connector.name}</h4>
+                        <p className="text-xs text-gray-500">Port {connector.port}</p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => openConfigModal(connector.id)}
+                        className="text-sm bg-gray-50 text-gray-600 px-3 py-1 rounded hover:bg-gray-100"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => testConnector(connector.id)}
+                        disabled={testResults[connector.id] === 'testing'}
+                        className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
+                      >
+                        {testResults[connector.id] === 'testing' ? 'Testing...' : 'Test'}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mb-4">{connector.description}</p>
+                  
+                  {testResults[connector.id] && (
+                    <div className={`p-2 rounded text-sm ${
+                      testResults[connector.id] === 'success' ? 'bg-green-50 text-green-700' : 
+                      testResults[connector.id] === 'error' ? 'bg-red-50 text-red-700' : ''
+                    }`}>
+                      {testResults[connector.id] === 'success' ? '✅ Connector available' : 
+                       testResults[connector.id] === 'error' ? '❌ Connector unavailable' : ''}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Configuration Modal */}
@@ -765,6 +861,26 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
               onClose={closeConfigModal}
             />
           )}
+
+          {/* Schema Upload Modal */}
+          <SchemaUploadModal
+            isOpen={schemaUploadModalOpen}
+            onClose={() => setSchemaUploadModalOpen(false)}
+            onSchemaRegistered={handleSchemaRegistered}
+          />
+
+          {/* REST API Analyzer Modal */}
+          <RestAPIAnalyzerModal
+            isOpen={restAPIAnalyzerOpen}
+            onClose={() => setRestAPIAnalyzerOpen(false)}
+            onSchemaGenerated={(schema) => {
+              // Handle generated schema from REST API analysis
+              // Could auto-register or show preview
+              console.log('Generated schema from REST API:', schema);
+              // Reload custom connectors
+              loadCustomConnectors();
+            }}
+          />
 
           <div className="flex justify-between mt-6">
             <button
