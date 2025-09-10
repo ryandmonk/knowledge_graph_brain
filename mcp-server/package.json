@@ -1,7 +1,7 @@
 {
   "name": "knowledge-graph-brain-mcp-server",
-  "version": "1.0.0", 
-  "description": "Universal MCP Server for Knowledge Graph Brain - exposes all capabilities as MCP tools for external clients",
+  "version": "0.19.0", 
+  "description": "Universal MCP Server for Knowledge Graph Brain with enterprise security integration",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

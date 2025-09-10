@@ -1,7 +1,7 @@
 {
   "name": "graph-rag-agent",
-  "version": "1.0.0",
-  "description": "LangGraph agent for knowledge graph RAG",
+  "version": "0.19.0",
+  "description": "LangGraph agent for knowledge graph RAG with enterprise integration",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

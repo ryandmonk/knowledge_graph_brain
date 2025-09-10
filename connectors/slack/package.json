@@ -1,7 +1,7 @@
 {
   "name": "slack-connector",
-  "version": "1.0.0",
-  "description": "Slack connector for Knowledge Graph Brain",
+  "version": "0.19.0",
+  "description": "Slack connector with enterprise monitoring integration",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -1,7 +1,7 @@
 {
   "name": "@knowledge-graph-brain/shared",
-  "version": "0.8.0",
-  "description": "Shared configuration and utilities for Knowledge Graph Brain",
+  "version": "0.19.0",
+  "description": "Shared configuration and utilities with enterprise security support",
   "main": "dist/config.js",
   "types": "dist/config.d.ts",
   "scripts": {

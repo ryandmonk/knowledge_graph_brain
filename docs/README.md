@@ -27,9 +27,10 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 - **[GraphRAG Implementation](./graphrag.md)** - Advanced graph-enhanced RAG with LangGraph agents
 - **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment for Docker, Kubernetes, and enterprise environments
 
-### 🏢 Enterprise Features ⭐ **New in v0.10.0**
+### 🏢 Enterprise Features ⭐ **v0.17.0 - v0.19.0**
+- **[Enterprise Features Guide](./enterprise-features.md)** - ⭐ **Complete enterprise implementation** with visual connector builder, real-time monitoring, and audit & security (v0.17.0-v0.19.0)
 - **[Identity Resolution Patterns](./identity-resolution.md)** - Enterprise entity deduplication with configurable confidence thresholds
-- **[Security Patterns](./security-patterns.md)** - Production credential management with AWS Secrets Manager, HashiCorp Vault, and RBAC
+- **[Security Patterns](./security-patterns.md)** - ⭐ **Production RBAC implementation** with audit trails and compliance monitoring (v0.19.0)
 
 ### 📋 Operations & Maintenance
 - **[CHANGELOG](../CHANGELOG.md)** - Release history and version information following semantic versioning

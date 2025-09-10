@@ -318,6 +318,192 @@ GET /api/health
   "details": {
     "neo4j_connected": true,
     "embedding_provider": "ollama:mxbai-embed-large",
+  }
+}
+```
+
+## **Enterprise Audit & Security APIs** ⭐ **v0.19.0+**
+
+### Configuration Audit Trail
+
+#### Get Configuration Changes
+```http
+GET /api/audit/config-changes
+```
+
+**Response:**
+```json
+{
+  "changes": [
+    {
+      "id": "config-001",
+      "timestamp": "2025-09-10T10:30:00Z",
+      "user": "admin@company.com",
+      "section": "neo4j",
+      "field": "uri",
+      "before": "bolt://localhost:7687",
+      "after": "bolt://neo4j.internal:7687",
+      "reason": "Migration to production cluster"
+    }
+  ]
+}
+```
+
+#### Get Audit Events
+```http
+GET /api/audit/events
+```
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "auth-001",
+      "timestamp": "2025-09-10T10:30:00Z",
+      "type": "authentication",
+      "user": "admin@company.com",
+      "action": "login",
+      "ip": "192.168.1.100",
+      "status": "success"
+    }
+  ]
+}
+```
+
+### Security Validation
+
+#### Get Security Metrics
+```http
+GET /api/security/metrics
+```
+
+**Response:**
+```json
+{
+  "securityScore": 63,
+  "totalChecks": 8,
+  "passedChecks": 5,
+  "failedChecks": 0,
+  "warningChecks": 3,
+  "lastUpdated": "2025-09-10T10:30:00Z"
+}
+```
+
+#### Run Security Checks
+```http
+GET /api/security/checks
+```
+
+**Response:**
+```json
+{
+  "checks": [
+    {
+      "id": "password-security",
+      "name": "Password Security",
+      "status": "passed",
+      "severity": "high",
+      "description": "Strong password policies enforced",
+      "recommendation": "Password complexity requirements met"
+    },
+    {
+      "id": "network-security",
+      "name": "Network Security",
+      "status": "warning",
+      "severity": "medium", 
+      "description": "Some services accessible without authentication",
+      "recommendation": "Enable authentication for all services"
+    }
+  ]
+}
+```
+
+#### Get Compliance Status
+```http
+GET /api/security/compliance
+```
+
+**Response:**
+```json
+{
+  "frameworks": {
+    "owasp": {
+      "score": 75,
+      "status": "good",
+      "checks": 12,
+      "passed": 9
+    },
+    "nist": {
+      "score": 68,
+      "status": "needs_improvement",
+      "checks": 15,
+      "passed": 10
+    },
+    "iso27001": {
+      "score": 70,
+      "status": "good", 
+      "checks": 18,
+      "passed": 13
+    }
+  }
+}
+```
+
+## **Real-Time Monitoring APIs** ⭐ **v0.18.0+**
+
+### System Monitoring
+
+#### Get Real-Time Metrics
+```http
+GET /api/monitoring/metrics
+```
+
+**Response:**
+```json
+{
+  "cpu": 45.2,
+  "memory": 1024,
+  "responseTime": 150,
+  "errorRate": 0.5,
+  "services": {
+    "neo4j": "healthy",
+    "ollama": "healthy",
+    "orchestrator": "healthy"
+  },
+  "timestamp": "2025-09-10T10:30:00Z"
+}
+```
+
+### Service Management
+
+#### Get Service Status
+```http
+GET /api/services/status
+```
+
+**Response:**
+```json
+{
+  "services": [
+    {
+      "name": "Neo4j",
+      "status": "healthy",
+      "port": 7687,
+      "cpu": 25.5,
+      "memory": 512,
+      "uptime": "2d 14h 23m"
+    },
+    {
+      "name": "Ollama",
+      "status": "healthy", 
+      "port": 11434,
+      "cpu": 15.2,
+      "memory": 2048,
+      "uptime": "2d 14h 23m"
+    }
+  ]
+}
     "memory_usage_mb": 245.7,
     "uptime_hours": 12.5,
     "active_runs": 0,
@@ -613,26 +799,40 @@ Planned metrics endpoints:
 
 ---
 
-## WebSocket API (Planned)
+## WebSocket API (Production Ready) ⭐ **v0.18.0+**
 
-Future support for real-time updates:
+**Real-time monitoring and system updates via WebSocket connection**:
 
 ```javascript
-// Connect to WebSocket
-const ws = new WebSocket('ws://localhost:3000/ws');
+// Connect to real-time monitoring WebSocket
+const ws = new WebSocket('ws://localhost:3000/ws/monitoring');
 
-// Subscribe to knowledge base updates
-ws.send(JSON.stringify({
-  type: 'subscribe',
-  kb_id: 'retail-demo'
-}));
-
-// Receive real-time ingestion progress
+// Real-time system metrics every 5 seconds
 ws.onmessage = (event) => {
-  const update = JSON.parse(event.data);
-  console.log('Ingestion progress:', update);
+  const metrics = JSON.parse(event.data);
+  console.log('Live metrics:', {
+    cpu: metrics.cpu,
+    memory: metrics.memory,
+    services: metrics.services,
+    responseTime: metrics.responseTime,
+    errorRate: metrics.errorRate
+  });
+};
+
+// Auto-reconnection with exponential backoff
+ws.onclose = () => {
+  setTimeout(() => {
+    // Reconnect logic with backoff
+    connectWithRetry();
+  }, 1000);
 };
 ```
+
+### WebSocket Endpoints
+
+- `ws://localhost:3000/ws/monitoring` - Real-time system performance metrics
+- **Data Frequency**: 5-second broadcast intervals
+- **Historical Data**: 24-hour retention with configurable time periods
 
 ---
 
