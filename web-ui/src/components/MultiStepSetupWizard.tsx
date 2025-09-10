@@ -1,13 +1,13 @@
 import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, RefreshCw, Settings, Database, Link, CheckSquare, Plus, Globe } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Settings, Database, Link, CheckSquare, Plus, Cog } from 'lucide-react';
 import { api, type EnvironmentConfig } from '../utils/api';
 import ConnectorConfigModal from './ConnectorConfigModal';
 import ConnectorIcon from './ConnectorIcon';
 import DemoModeToggle from './DemoModeToggle';
 import { LLMModelSelector } from './LLMModelSelector';
-import { SchemaUploadModal } from './SchemaUploadModal';
-import { RestAPIAnalyzerModal } from './RestAPIAnalyzerModal';
+import ConnectorBuilderModal from './custom-connectors/ConnectorBuilderModal';
+import { ConfigurationDashboard } from './setup';
 
 interface StepProps {
   isActive: boolean;
@@ -181,6 +181,7 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
   const [testResults, setTestResults] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [advancedConfigOpen, setAdvancedConfigOpen] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -334,8 +335,19 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
           <Settings className="w-5 h-5" />
         </div>
         <div className="flex-grow">
-          <h3 className="text-lg font-medium text-gray-900">Environment Configuration</h3>
-          <p className="text-sm text-gray-500 mt-1">Review and validate your system configuration</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Environment Configuration</h3>
+              <p className="text-sm text-gray-500 mt-1">Review and validate your system configuration</p>
+            </div>
+            <button
+              onClick={() => setAdvancedConfigOpen(true)}
+              className="flex items-center space-x-2 text-sm bg-gray-50 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Cog className="w-4 h-4" />
+              <span>Advanced Config</span>
+            </button>
+          </div>
           
           <div className="mt-6 space-y-6">
             {/* Neo4j Configuration */}
@@ -638,6 +650,26 @@ function ConfigurationStep({ onNext, onBack }: { onNext: () => void; onBack: () 
           </div>
         </div>
       </div>
+
+      {/* Advanced Configuration Dashboard Modal */}
+      {advancedConfigOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Advanced Configuration Dashboard</h2>
+              <button
+                onClick={() => setAdvancedConfigOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 120px)' }}>
+              <ConfigurationDashboard />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -648,8 +680,7 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
   const [loading, setLoading] = useState(true);
   const [testResults, setTestResults] = useState<Record<string, string>>({});
   const [configModalOpen, setConfigModalOpen] = useState<string | null>(null);
-  const [schemaUploadModalOpen, setSchemaUploadModalOpen] = useState(false);
-  const [restAPIAnalyzerOpen, setRestAPIAnalyzerOpen] = useState(false);
+  const [connectorBuilderOpen, setConnectorBuilderOpen] = useState(false);
   const [customConnectors, setCustomConnectors] = useState<any[]>([]);
 
   useEffect(() => {
@@ -706,12 +737,6 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
     }
   };
 
-  const handleSchemaRegistered = (kb_id: string) => {
-    console.log(`Custom connector registered: ${kb_id}`);
-    // Reload custom connectors after registration
-    loadCustomConnectors();
-  };
-
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center">
@@ -735,22 +760,13 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
           <div className="mt-6">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-md font-medium text-gray-900">Custom Connectors</h4>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setSchemaUploadModalOpen(true)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>OpenAPI</span>
-                </button>
-                <button
-                  onClick={() => setRestAPIAnalyzerOpen(true)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                >
-                  <Globe className="w-4 h-4" />
-                  <span>Live API</span>
-                </button>
-              </div>
+              <button
+                onClick={() => setConnectorBuilderOpen(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Build Custom Connector</span>
+              </button>
             </div>
 
             {customConnectors.length > 0 ? (
@@ -779,23 +795,13 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
               <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center mb-6">
                 <Database className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-500 mb-3">No custom connectors created yet</p>
-                <div className="flex justify-center space-x-3">
-                  <button
-                    onClick={() => setSchemaUploadModalOpen(true)}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Create from OpenAPI spec →</span>
-                  </button>
-                  <span className="text-gray-400">|</span>
-                  <button
-                    onClick={() => setRestAPIAnalyzerOpen(true)}
-                    className="text-sm text-green-600 hover:text-green-800 flex items-center space-x-1"
-                  >
-                    <Globe className="w-4 h-4" />
-                    <span>Analyze live REST API →</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => setConnectorBuilderOpen(true)}
+                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Build Custom Connector →</span>
+                </button>
               </div>
             )}
 
@@ -862,22 +868,12 @@ function ConnectorStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
             />
           )}
 
-          {/* Schema Upload Modal */}
-          <SchemaUploadModal
-            isOpen={schemaUploadModalOpen}
-            onClose={() => setSchemaUploadModalOpen(false)}
-            onSchemaRegistered={handleSchemaRegistered}
-          />
-
-          {/* REST API Analyzer Modal */}
-          <RestAPIAnalyzerModal
-            isOpen={restAPIAnalyzerOpen}
-            onClose={() => setRestAPIAnalyzerOpen(false)}
-            onSchemaGenerated={(schema) => {
-              // Handle generated schema from REST API analysis
-              // Could auto-register or show preview
-              console.log('Generated schema from REST API:', schema);
-              // Reload custom connectors
+          {/* Visual Connector Builder Modal */}
+          <ConnectorBuilderModal
+            isOpen={connectorBuilderOpen}
+            onClose={() => setConnectorBuilderOpen(false)}
+            onConnectorCreated={() => {
+              // Reload custom connectors when a new one is created
               loadCustomConnectors();
             }}
           />
