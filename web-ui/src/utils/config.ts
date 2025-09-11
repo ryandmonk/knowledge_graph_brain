@@ -1,6 +1,6 @@
 export const APP_CONFIG = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  APP_VERSION: '1.0.0',
+  APP_VERSION: '0.19.0',
   APP_NAME: 'Knowledge Graph Brain'
 };
 

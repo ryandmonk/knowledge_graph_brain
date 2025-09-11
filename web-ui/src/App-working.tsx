@@ -141,7 +141,7 @@ function App() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">v1.0.0</span>
+              <span className="text-sm text-gray-500">v0.19.0</span>
             </div>
           </div>
         </div>

@@ -15,9 +15,11 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">KG</span>
-              </div>
+              <img 
+                src="logo.svg" 
+                alt="Knowledge Graph Brain"
+                className="w-8 h-8"
+              />
               <h1 className="text-xl font-semibold text-gray-900">
                 Knowledge Graph Brain
               </h1>
@@ -46,7 +48,7 @@ export function Layout({ children }: LayoutProps) {
                 Dashboard
               </Link>
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-500">v1.0.0</span>
+                <span className="text-sm text-gray-500">v0.19.0</span>
               </div>
             </nav>
           </div>

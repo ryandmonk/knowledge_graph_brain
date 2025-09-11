@@ -65,7 +65,7 @@ export default function ConnectorDeployStep({
         name: data.name,
         description: data.description,
         apiUrl: data.apiUrl,
-        version: '1.0.0',
+        version: '0.19.0',
         configuration: data.configuration
       },
       schema: data.schema,

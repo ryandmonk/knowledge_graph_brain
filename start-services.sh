@@ -126,6 +126,9 @@ start_services() {
     # Start orchestrator
     start_service "Orchestrator" "orchestrator" "${ORCHESTRATOR_PORT:-3000}"
     
+    # Start web UI
+    start_service "Web-UI" "web-ui" "${WEB_UI_PORT:-3100}"
+    
     # Start connectors
     start_service "GitHub-Connector" "connectors/github" "${GITHUB_CONNECTOR_PORT:-3001}"
     start_service "Slack-Connector" "connectors/slack" "${SLACK_CONNECTOR_PORT:-3003}"
@@ -137,6 +140,7 @@ start_services() {
     echo ""
     echo -e "${BLUE}🔍 Service URLs:${NC}"
     echo "   Orchestrator:          http://localhost:${ORCHESTRATOR_PORT:-3000}"
+    echo "   Web UI:                http://localhost:${WEB_UI_PORT:-3100}/ui/"
     echo "   GitHub Connector:      http://localhost:${GITHUB_CONNECTOR_PORT:-3001}" 
     echo "   Slack Connector:       http://localhost:${SLACK_CONNECTOR_PORT:-3003}"
     echo "   Confluence Connector:  http://localhost:${CONFLUENCE_CONNECTOR_PORT:-3004}"
@@ -203,6 +207,7 @@ main() {
     echo ""
     echo -e "${BLUE}📋 Service URLs:${NC}"
     echo "  🔧 MCP Orchestrator: http://localhost:3000"
+    echo "  🌐 Web UI: http://localhost:3100/ui/"
     echo "  🔗 Confluence Connector: http://localhost:3001" 
     echo "  🗄️ Neo4j Browser: http://localhost:7474 (neo4j/password)"
     echo "  🧠 Ollama: http://localhost:11434"
@@ -231,6 +236,7 @@ case "${1:-start}" in
         # Check each service
         services=(
             "http://localhost:3000/health|MCP Orchestrator"
+            "http://localhost:3100/ui/|Web UI"
             "http://localhost:3001/pull|GitHub Connector"
             "http://localhost:3003/pull|Slack Connector"
             "http://localhost:3004/pull|Confluence Connector"
