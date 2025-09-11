@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import { api, type GraphRAGResponse } from '../utils/api';
+import { useKeyboardShortcuts, type KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
+import { QueryTemplateSelector } from './QueryTemplateSelector';
+import { type QueryTemplate } from '../utils/queryTemplates';
+import { EnhancedErrorDisplay } from './EnhancedErrorDisplay';
+import { categorizeError, globalRetryManager, type EnhancedError } from '../utils/errorHandling';
 
 interface QueryModalProps {
   isOpen: boolean;
@@ -12,8 +17,9 @@ export function QueryModal({ isOpen, onClose, kb_id, kb_name }: QueryModalProps)
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<GraphRAGResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<EnhancedError | null>(null);
   const [showProvenance, setShowProvenance] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,11 +29,19 @@ export function QueryModal({ isOpen, onClose, kb_id, kb_name }: QueryModalProps)
     setError(null);
     setResponse(null);
 
+    const operationId = `query-${Date.now()}`;
+
     try {
       const result = await api.askQuestion(question, kb_id);
       setResponse(result);
+      globalRetryManager.reset(operationId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process question');
+      const enhancedError = categorizeError(err instanceof Error ? err : new Error(String(err)), {
+        kb_id,
+        query: question,
+        operation: 'query'
+      });
+      setError(enhancedError);
     } finally {
       setLoading(false);
     }
@@ -38,8 +52,69 @@ export function QueryModal({ isOpen, onClose, kb_id, kb_name }: QueryModalProps)
     setResponse(null);
     setError(null);
     setShowProvenance(false);
+    setShowTemplateSelector(false);
     onClose();
   };
+
+  const handleTemplateSelect = (template: QueryTemplate) => {
+    setQuestion(template.query);
+    setShowTemplateSelector(false);
+  };
+
+  // Define keyboard shortcuts for QueryModal
+  const queryModalShortcuts: KeyboardShortcut[] = [
+    {
+      key: 'Escape',
+      action: () => {
+        if (showTemplateSelector) {
+          setShowTemplateSelector(false);
+        } else {
+          handleClose();
+        }
+      },
+      description: 'Close modal or template selector',
+      context: 'query-modal'
+    },
+    {
+      key: 'Enter',
+      ctrlKey: true,
+      metaKey: true,
+      action: () => {
+        if (question.trim() && !loading && !showTemplateSelector) {
+          const form = document.querySelector('form') as HTMLFormElement;
+          if (form) {
+            const event = new Event('submit', { cancelable: true, bubbles: true });
+            form.dispatchEvent(event);
+          }
+        }
+      },
+      description: 'Submit query (Ctrl/Cmd+Enter)',
+      context: 'query-modal'
+    },
+    {
+      key: 'p',
+      action: () => {
+        if (response && !showTemplateSelector) {
+          setShowProvenance(!showProvenance);
+        }
+      },
+      description: 'Toggle provenance details (P)',
+      context: 'query-modal'
+    },
+    {
+      key: 't',
+      action: () => {
+        if (!loading && !response) {
+          setShowTemplateSelector(!showTemplateSelector);
+        }
+      },
+      description: 'Open query templates (T)',
+      context: 'query-modal'
+    }
+  ];
+
+  // Enable keyboard shortcuts when modal is open
+  useKeyboardShortcuts(isOpen ? queryModalShortcuts : [], { context: 'query-modal' });
 
   if (!isOpen) return null;
 
@@ -66,9 +141,22 @@ export function QueryModal({ isOpen, onClose, kb_id, kb_name }: QueryModalProps)
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* Question Input */}
           <form onSubmit={handleSubmit} className="mb-6">
-            <label htmlFor="question" className="block text-sm font-medium text-gray-700 mb-2">
-              Ask a question
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label htmlFor="question" className="block text-sm font-medium text-gray-700">
+                Ask a question
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowTemplateSelector(true)}
+                disabled={loading || !!response}
+                className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Use Template (T)</span>
+              </button>
+            </div>
             <div className="flex gap-3">
               <input
                 type="text"
@@ -98,15 +186,12 @@ export function QueryModal({ isOpen, onClose, kb_id, kb_name }: QueryModalProps)
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-red-700 font-medium">Error</span>
-              </div>
-              <p className="text-red-600 mt-1">{error}</p>
-            </div>
+            <EnhancedErrorDisplay
+              error={error}
+              onRetry={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+              onDismiss={() => setError(null)}
+              operationId={`query-${kb_id}-${question}`}
+            />
           )}
 
           {/* Loading State */}
@@ -290,6 +375,14 @@ export function QueryModal({ isOpen, onClose, kb_id, kb_name }: QueryModalProps)
           </div>
         </div>
       </div>
+
+      {/* Query Template Selector */}
+      {showTemplateSelector && (
+        <QueryTemplateSelector
+          onSelectTemplate={handleTemplateSelect}
+          onClose={() => setShowTemplateSelector(false)}
+        />
+      )}
     </div>
   );
 }

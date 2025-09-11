@@ -4,7 +4,7 @@
 # Knowledge Graph Brain
 </div>
 
-> **Unify silos into a knowledge graph brain that powers trustworthy RAG and agent workflows — with per-domain schemas, provenance, and pluggable embeddings.**
+> **Enterprise-ready knowledge graph platform that unifies data silos into intelligent, trustworthy RAG workflows — with complete audit trails, security management, and visual connector building.**
 
 ---
 
@@ -13,7 +13,10 @@
 - **Connect** multiple systems (Confluence, GitHub, Slack…) with declarative YAML schemas  
 - **Ingest** into Neo4j with vector embeddings and provenance tracking  
 - **Query** using hybrid GraphRAG (semantic + graph reasoning)  
-- **Expose** everything as MCP tools or REST APIs for your favorite clients  
+- **Expose** everything as MCP tools or REST APIs for your favorite clients
+- **Secure** with enterprise-grade RBAC, audit trails, and access control
+- **Monitor** with real-time WebSocket dashboards and performance metrics
+- **Build** custom connectors visually from OpenAPI specifications with AI assistance  
 
 ---
 

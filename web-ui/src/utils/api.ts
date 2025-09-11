@@ -128,6 +128,72 @@ export interface GraphRAGResponse {
   timestamp: string;
 }
 
+// 3D Graph Visualization Interfaces
+export interface GraphNode3D {
+  id: string;
+  label: string;
+  type: string;
+  properties: Record<string, any>;
+  position?: { x: number; y: number; z: number };
+  size?: number;
+  color?: string;
+  metadata?: {
+    created_at?: string;
+    updated_at?: string;
+    source?: string;
+    confidence?: number;
+  };
+}
+
+export interface GraphEdge3D {
+  id: string;
+  source: string;
+  target: string;
+  relationship: string;
+  properties: Record<string, any>;
+  weight?: number;
+  color?: string;
+  metadata?: {
+    created_at?: string;
+    strength?: number;
+    confidence?: number;
+  };
+}
+
+export interface GraphFilters {
+  nodeTypes?: string[];
+  relationshipTypes?: string[];
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  limit?: number;
+  minConnections?: number;
+  searchQuery?: string;
+}
+
+export interface GraphVisualizationData {
+  nodes: GraphNode3D[];
+  edges: GraphEdge3D[];
+  stats: {
+    nodeCount: number;
+    edgeCount: number;
+    nodeTypes: string[];
+    relationshipTypes: string[];
+  };
+  layout?: {
+    algorithm: string;
+    parameters: Record<string, any>;
+  };
+}
+
+export interface CypherQueryResult {
+  rows: any[];
+  query: string;
+  kb_id: string;
+  count: number;
+}
+
 class KnowledgeGraphAPI {
   private client: AxiosInstance;
 
@@ -175,6 +241,126 @@ class KnowledgeGraphAPI {
       timeout: 120000 // 2 minutes for GraphRAG processing
     });
     return response.data;
+  }
+
+  // Graph Visualization APIs
+  async executeCypherQuery(cypher: string, kb_id: string): Promise<CypherQueryResult> {
+    const response = await this.client.post('/api/search-graph', {
+      cypher,
+      kb_id
+    });
+    return response.data;
+  }
+
+  async getGraphVisualizationData(kb_id: string, filters?: GraphFilters): Promise<GraphVisualizationData> {
+    // Build a Cypher query to get nodes and relationships for 3D visualization
+    let nodeQuery = `MATCH (n) WHERE n.kb_id = $kb_id`;
+    let relQuery = `MATCH (a)-[r]->(b) WHERE a.kb_id = $kb_id AND b.kb_id = $kb_id`;
+    
+    // Apply filters
+    if (filters?.nodeTypes?.length) {
+      const typeConditions = filters.nodeTypes.map(type => `'${type}' IN labels(n)`).join(' OR ');
+      nodeQuery += ` AND (${typeConditions})`;
+    }
+    
+    if (filters?.relationshipTypes?.length) {
+      const relTypeConditions = filters.relationshipTypes.map(type => `type(r) = '${type}'`).join(' OR ');
+      relQuery += ` AND (${relTypeConditions})`;
+    }
+    
+    if (filters?.searchQuery) {
+      nodeQuery += ` AND (n.name CONTAINS $searchQuery OR n.title CONTAINS $searchQuery OR n.content CONTAINS $searchQuery)`;
+    }
+    
+    const limit = filters?.limit || 1000;
+    nodeQuery += ` RETURN n LIMIT ${limit}`;
+    relQuery += ` RETURN a, r, b LIMIT ${limit}`;
+    
+    // Execute both queries
+    const [nodeResult, relResult] = await Promise.all([
+      this.executeCypherQuery(nodeQuery, kb_id),
+      this.executeCypherQuery(relQuery, kb_id)
+    ]);
+    
+    // Transform results into 3D graph format
+    const nodes: GraphNode3D[] = nodeResult.rows.map((row: any, index: number) => {
+      const node = row.n;
+      return {
+        id: node.id || `node_${index}`,
+        label: node.name || node.title || node.id || `Node ${index}`,
+        type: node.labels?.[0] || 'Unknown',
+        properties: node.properties || {},
+        size: Math.log(1 + (node.degree || 1)) * 5, // Size based on connections
+        metadata: {
+          created_at: node.created_at,
+          updated_at: node.updated_at,
+          source: node.source,
+          confidence: node.confidence
+        }
+      };
+    });
+    
+    const edges: GraphEdge3D[] = relResult.rows.map((row: any, index: number) => {
+      const sourceNode = row.a;
+      const relationship = row.r;
+      const targetNode = row.b;
+      
+      return {
+        id: relationship.id || `edge_${index}`,
+        source: sourceNode.id || `node_${sourceNode.elementId}`,
+        target: targetNode.id || `node_${targetNode.elementId}`,
+        relationship: relationship.type || 'RELATED_TO',
+        properties: relationship.properties || {},
+        weight: relationship.weight || 1,
+        metadata: {
+          created_at: relationship.created_at,
+          strength: relationship.strength || 1,
+          confidence: relationship.confidence
+        }
+      };
+    });
+    
+    // Calculate stats
+    const nodeTypes = Array.from(new Set(nodes.map(n => n.type)));
+    const relationshipTypes = Array.from(new Set(edges.map(e => e.relationship)));
+    
+    return {
+      nodes,
+      edges,
+      stats: {
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        nodeTypes,
+        relationshipTypes
+      },
+      layout: {
+        algorithm: 'd3-force-3d',
+        parameters: {
+          linkDistance: 100,
+          nodeStrength: -1000,
+          linkStrength: 0.5
+        }
+      }
+    };
+  }
+
+  async getGraphStructure(kb_id: string, _filters?: GraphFilters): Promise<{ nodeTypes: string[]; relationshipTypes: string[]; totalNodes: number; totalEdges: number }> {
+    // Get basic graph structure information for UI filters
+    const structureQuery = `
+      MATCH (n) WHERE n.kb_id = $kb_id
+      WITH collect(DISTINCT labels(n)) as nodeLabels, count(n) as nodeCount
+      MATCH (a)-[r]->(b) WHERE a.kb_id = $kb_id AND b.kb_id = $kb_id
+      WITH nodeLabels, nodeCount, collect(DISTINCT type(r)) as relTypes, count(r) as relCount
+      RETURN {
+        nodeTypes: reduce(acc = [], labels IN nodeLabels | acc + labels),
+        relationshipTypes: relTypes,
+        totalNodes: nodeCount,
+        totalEdges: relCount
+      } as structure
+    `;
+    
+    const result = await this.executeCypherQuery(structureQuery, kb_id);
+    return result.rows[0]?.structure || { nodeTypes: [], relationshipTypes: [], totalNodes: 0, totalEdges: 0 };
   }
 
   async basicHealthCheck(): Promise<{ status: string; service: string }> {

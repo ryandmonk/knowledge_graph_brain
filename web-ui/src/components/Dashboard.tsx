@@ -4,6 +4,7 @@ import { QueryModal } from './QueryModal';
 import { ConnectorBuilderModal } from './custom-connectors';
 import { SystemMonitor } from './monitoring';
 import { ConfigurationTesting, ServiceManager, ConfigurationAudit, SecurityDashboard, AccessControl } from './setup';
+import { useKeyboardShortcuts, type KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 
 export function Dashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
@@ -16,6 +17,87 @@ export function Dashboard() {
     kb_name: ''
   });
   const [connectorBuilderModal, setConnectorBuilderModal] = useState(false);
+
+  // Define tab mapping for keyboard shortcuts
+  const tabShortcuts: KeyboardShortcut[] = [
+    {
+      key: '1',
+      action: () => setActiveTab('overview'),
+      description: 'Switch to System Overview tab',
+      context: 'dashboard'
+    },
+    {
+      key: '2',
+      action: () => setActiveTab('monitoring'),
+      description: 'Switch to Real-Time Monitoring tab',
+      context: 'dashboard'
+    },
+    {
+      key: '3',
+      action: () => setActiveTab('testing'),
+      description: 'Switch to Configuration Testing tab',
+      context: 'dashboard'
+    },
+    {
+      key: '4',
+      action: () => setActiveTab('services'),
+      description: 'Switch to Service Management tab',
+      context: 'dashboard'
+    },
+    {
+      key: '5',
+      action: () => setActiveTab('audit'),
+      description: 'Switch to Configuration Audit tab',
+      context: 'dashboard'
+    },
+    {
+      key: '6',
+      action: () => setActiveTab('security'),
+      description: 'Switch to Security Dashboard tab',
+      context: 'dashboard'
+    },
+    {
+      key: '7',
+      action: () => setActiveTab('access'),
+      description: 'Switch to Access Control tab',
+      context: 'dashboard'
+    },
+    {
+      key: 'q',
+      altKey: true,
+      action: () => {
+        // Open query modal for first available KB
+        if (systemStatus?.knowledge_bases && systemStatus.knowledge_bases.length > 0) {
+          const firstKb = systemStatus.knowledge_bases[0];
+          setQueryModal({
+            isOpen: true,
+            kb_id: firstKb.kb_id,
+            kb_name: firstKb.kb_id
+          });
+        }
+      },
+      description: 'Open Query Modal (Alt+Q)',
+      context: 'dashboard'
+    },
+    {
+      key: 'c',
+      altKey: true,
+      action: () => setConnectorBuilderModal(true),
+      description: 'Open Connector Builder (Alt+C)',
+      context: 'dashboard'
+    },
+    {
+      key: 'r',
+      ctrlKey: true,
+      metaKey: true,
+      action: () => loadSystemStatus(),
+      description: 'Refresh system status (Ctrl/Cmd+R)',
+      context: 'dashboard'
+    }
+  ];
+
+  // Enable keyboard shortcuts for dashboard
+  useKeyboardShortcuts(tabShortcuts, { context: 'dashboard' });
 
   useEffect(() => {
     loadSystemStatus();
@@ -418,6 +500,12 @@ export function Dashboard() {
                           })}
                         >
                           Query Knowledge Base
+                        </button>
+                        <button 
+                          className="btn-secondary text-sm"
+                          onClick={() => window.location.hash = `/graph/${kb.kb_id}`}
+                        >
+                          View 3D Graph
                         </button>
                         <button className="btn-secondary text-sm">
                           View Details

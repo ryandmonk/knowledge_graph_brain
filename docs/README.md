@@ -32,6 +32,10 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 - **[Identity Resolution Patterns](./identity-resolution.md)** - Enterprise entity deduplication with configurable confidence thresholds
 - **[Security Patterns](./security-patterns.md)** - ⭐ **Production RBAC implementation** with audit trails and compliance monitoring (v0.19.0)
 
+### 🎨 User Experience & Interface ⭐ **v0.19.0 - NEW**
+- **[User Experience Guide](./user-experience.md)** - ⭐ **Complete UX features guide** including 3D visualization, keyboard shortcuts, and query templates (v0.19.0)
+- **[3D Visualization Guide](./3d-visualization.md)** - ⭐ **Revolutionary 3D graph exploration** with analytics, visual effects, and professional performance (v0.19.0)
+
 ### 📋 Operations & Maintenance
 - **[CHANGELOG](../CHANGELOG.md)** - Release history and version information following semantic versioning
 - **[CLI Documentation](../cli/README.md)** - Detailed CLI tools documentation with troubleshooting
@@ -48,6 +52,15 @@ The Knowledge Graph Brain documentation is organized by use case and user journe
 
 **Integrate Data Sources**
 1. Review [Connectors Guide](./connectors.md) for available connectors
+2. Check [OpenAPI Integration](./openapi-integration.md) for REST API sources  
+3. Use [Enterprise Features](./enterprise-features.md) for visual connector building
+4. Follow [GitHub Integration](./workflows/github-integration-guide.md) for code repositories
+
+**Explore Knowledge Graphs**
+1. Start with [User Experience Guide](./user-experience.md) to learn the interface
+2. Use [3D Visualization Guide](./3d-visualization.md) for immersive graph exploration
+3. Try [Query Templates](./user-experience.md#query-templates-system) for common analysis patterns
+4. Master [Keyboard Shortcuts](./user-experience.md#global-keyboard-shortcuts) for productivity
 2. Use [API Reference](./API.md) for orchestrator endpoints
 3. Test with [CLI Tools](./cli.md) status monitoring
 
