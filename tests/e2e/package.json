@@ -5,7 +5,7 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:debug": "playwright test --debug",
+    "test:debug": "playwright test --debug", 
     "test:ui": "playwright test --ui",
     "test:api": "playwright test --project=api-tests",
     "test:visual": "playwright test --project=visual",
@@ -13,7 +13,25 @@
     "test:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
     "test:cross-browser": "playwright test --project=chromium --project=firefox --project=webkit",
     "show-report": "playwright show-report",
-    "install-browsers": "playwright install"
+    "install-browsers": "playwright install",
+    
+    "_comment": "=== Credential-based Production Testing ===",
+    "test:production": "playwright test tests/github-integration.spec.ts tests/confluence-integration.spec.ts tests/production-workflow.spec.ts",
+    "test:production:headed": "playwright test --headed tests/github-integration.spec.ts tests/confluence-integration.spec.ts tests/production-workflow.spec.ts",
+    "test:github": "playwright test tests/github-integration.spec.ts",
+    "test:confluence": "playwright test tests/confluence-integration.spec.ts",
+    "test:workflow": "playwright test tests/production-workflow.spec.ts",
+    
+    "_comment2": "=== Smoke and Demo Testing ===",
+    "test:smoke": "playwright test tests/smoke.spec.ts",
+    "test:smoke:headed": "playwright test --headed tests/smoke.spec.ts",
+    "test:ui-comprehensive": "playwright test tests/ui-comprehensive.spec.ts",
+    
+    "_comment3": "=== Setup and Verification ===",
+    "setup:credentials": "./setup-credentials.sh",
+    "setup:credentials:interactive": "./setup-credentials.sh --interactive", 
+    "verify:credentials": "./verify-credentials.sh",
+    "setup:all": "npm run setup:credentials && npm run verify:credentials"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

@@ -47,6 +47,20 @@ npx playwright install
 ```
 
 ### **3. Run Tests**
+
+**🔐 Production Testing with Real Connectors:**
+```bash
+# Setup your API credentials first
+./setup-credentials.sh --interactive
+
+# Verify credentials are working
+./verify-credentials.sh
+
+# Run production connector tests
+npm run test:production:headed
+```
+
+**🧪 Development/Demo Testing:**
 ```bash
 # All tests
 npm test
@@ -96,12 +110,46 @@ npm run test:ui          # Interactive UI mode
 - ✅ **Rendering Performance**: Large datasets → interaction responsiveness
 - ✅ **Network Conditions**: Slow 3G → offline handling → recovery
 
+## � **Connector Credential Testing**
+
+### **Production Connector Integration**
+Test real data connectors with actual API credentials for comprehensive validation:
+
+**📋 Supported Connectors:**
+- **🐙 GitHub**: Repository data, issues, PRs, commits, releases
+- **📚 Confluence**: Spaces, pages, comments, attachments  
+- **💬 Slack**: Channels, messages, users, threads
+- **🛍️ Custom**: OpenAPI-defined connectors
+
+**🚀 Quick Setup:**
+```bash
+# Interactive credential setup
+./setup-credentials.sh --interactive
+
+# Verify API access  
+./verify-credentials.sh
+
+# Run production tests
+npm run test:production:headed
+```
+
+**📖 Detailed Guide:** See [CREDENTIAL_TESTING_GUIDE.md](./CREDENTIAL_TESTING_GUIDE.md)
+
+### **Test Categories with Credentials**
+
+| Test Type | Command | Requirements | Purpose |
+|-----------|---------|--------------|---------|
+| **GitHub Integration** | `npm run test:github` | `GITHUB_TOKEN` | Real repository ingestion |
+| **Confluence Integration** | `npm run test:confluence` | Confluence API credentials | Document ingestion testing |
+| **Complete Workflow** | `npm run test:workflow` | Any connector credentials | End-to-end production flow |
+| **Smoke Tests** | `npm run test:smoke` | None (demo mode) | Quick functionality validation |
+
 ## 🔧 **Configuration**
 
-### **Test Environment Variables**
+### **Base Test Environment**
 ```bash
 # Base URLs
-PLAYWRIGHT_BASE_URL=http://localhost:3100       # Web UI URL  
+PLAYWRIGHT_BASE_URL=http://localhost:3000       # Web UI URL (corrected)
 ORCHESTRATOR_URL=http://localhost:3000          # API URL
 
 # Neo4j Configuration
@@ -112,6 +160,21 @@ NEO4J_PASSWORD=password
 # Test Data
 TEST_KB_ID=playwright-test-demo
 DEMO_MODE=true
+```
+
+### **Production Connector Credentials**
+```bash
+# GitHub Connector
+GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_REPOSITORIES=owner/repo1,owner/repo2
+
+# Confluence Connector  
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net
+CONFLUENCE_EMAIL=your-email@company.com
+CONFLUENCE_API_TOKEN=your_confluence_api_token
+
+# Slack Connector (Optional)
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 ```
 
 ### **Browser Configuration**

@@ -22,6 +22,28 @@ interface ConnectorConfig {
   }>;
 }
 
+// Helper function to generate consistent test IDs for form fields
+function getFieldTestId(fieldName: string, connectorId: string): string {
+  const fieldMap: Record<string, string> = {
+    // GitHub fields
+    'GITHUB_TOKEN': 'github-token',
+    'GITHUB_REPOSITORIES': 'github-repo',
+    'GITHUB_OWNER': 'github-owner',
+    
+    // Confluence fields  
+    'CONFLUENCE_BASE_URL': 'confluence-url',
+    'CONFLUENCE_EMAIL': 'confluence-username',
+    'CONFLUENCE_API_TOKEN': 'confluence-token',
+    'CONFLUENCE_DOMAIN': 'confluence-url',
+    
+    // Slack fields
+    'SLACK_BOT_TOKEN': 'slack-token',
+    'SLACK_APP_TOKEN': 'slack-app-token'
+  };
+  
+  return fieldMap[fieldName] || `${connectorId}-${fieldName.toLowerCase()}`;
+}
+
 function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: ConnectorConfigProps) {
   const [config, setConfig] = useState<ConnectorConfig | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -278,6 +300,9 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
         if (result.requiresRestart) {
           alert('Configuration saved! Please restart the connector service for changes to take effect.');
         }
+        
+        // Close modal after successful save
+        onClose?.();
       } else {
         setError(result.message || 'Failed to save configuration');
         onConfigUpdate?.(connectorId, false);
@@ -352,7 +377,7 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div data-testid="connector-modal" className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -587,6 +612,7 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
                       value={formData[field.name] || ''}
                       onChange={(e) => handleFieldChange(field.name, e.target.value)}
                       placeholder={field.placeholder || (field.type === 'password' ? 'Enter new value to update' : '')}
+                      data-testid={getFieldTestId(field.name, connectorId)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {field.type === 'password' && field.value === '***' && (
@@ -607,24 +633,28 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
               <button
                 onClick={testConfiguration}
                 disabled={testing}
+                data-testid="test-connection"
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50"
               >
                 <TestTube className={`w-4 h-4 ${testing ? 'animate-pulse' : ''}`} />
                 <span>{testing ? 'Testing...' : 'Test Connection'}</span>
               </button>
             </div>
-            
             {testResult && (
-              <div className={`p-3 rounded-lg ${
-                testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-              }`}>
+              <div 
+                data-testid="connection-result"
+                className={`p-3 rounded-lg ${
+                  testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                }`}>
                 <div className="flex items-center space-x-2">
                   {testResult.success ? (
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   ) : (
                     <XCircle className="w-5 h-5 text-red-600" />
                   )}
-                  <span className={`font-medium ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                  <span 
+                    data-testid={testResult.success ? "connection-success" : "connection-error"}
+                    className={`font-medium ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
                     {testResult.success ? 'Connection successful!' : 'Connection failed'}
                   </span>
                 </div>
@@ -660,6 +690,7 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
             </div>
             <div className="flex space-x-3">
               <button
+                data-testid="cancel-button"
                 onClick={onClose}
                 disabled={saving}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
@@ -667,6 +698,7 @@ function ConnectorConfigModal({ connectorId, onConfigUpdate, onClose }: Connecto
                 Cancel
               </button>
               <button
+                data-testid="save-configuration"
                 onClick={saveConfiguration}
                 disabled={saving || !hasUnsavedChanges()}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"

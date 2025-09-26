@@ -161,14 +161,14 @@ async function setupTestKnowledgeBases(orchestratorURL: string) {
 
 async function validateConnectors() {
   const connectors = [
-    { name: 'Confluence', port: 3001 },
-    { name: 'GitHub', port: 3002 },
-    { name: 'Slack', port: 3003 }
+    { name: 'GitHub', port: 3001 },
+    { name: 'Slack', port: 3003 },
+    { name: 'Confluence', port: 3004 }
   ];
 
   for (const connector of connectors) {
     try {
-      const response = await axios.get(`http://localhost:${connector.port}/info`, { 
+      const response = await axios.get(`http://localhost:${connector.port}/health`, { 
         timeout: 5000 
       });
       console.log(`✅ ${connector.name} connector available`);
