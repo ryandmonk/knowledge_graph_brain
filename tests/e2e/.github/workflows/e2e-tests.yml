@@ -1,0 +1,269 @@
+name: E2E Tests with Playwright
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run nightly at 2 AM UTC for extended testing
+    - cron: '0 2 * * *'
+
+jobs:
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        # Test different Node versions for compatibility
+        node-version: [18, 20]
+        # Test categories for parallel execution
+        test-category: [core, api, visual, performance]
+    
+    services:
+      neo4j:
+        image: neo4j:5.15
+        env:
+          NEO4J_AUTH: neo4j/password
+          NEO4J_PLUGINS: '["apoc"]'
+        ports:
+          - 7474:7474
+          - 7687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests/e2e && npm ci
+      
+      - name: Install Playwright browsers
+        run: |
+          cd tests/e2e
+          npx playwright install --with-deps
+      
+      - name: Setup Ollama (for embedding tests)
+        run: |
+          # Install Ollama for embedding provider testing
+          curl -fsSL https://ollama.ai/install.sh | sh
+          ollama serve &
+          sleep 10
+          ollama pull mxbai-embed-large
+        if: matrix.test-category == 'core' || matrix.test-category == 'performance'
+      
+      - name: Build application services
+        run: |
+          # Build orchestrator
+          cd orchestrator && npm run build
+          
+          # Build web-ui
+          cd ../web-ui && npm run build
+          
+          # Build connectors
+          cd ../connectors/confluence && npm install
+          cd ../github && npm install
+          cd ../slack && npm install
+      
+      - name: Start services
+        run: |
+          # Start services in background
+          ./start-services.sh &
+          
+          # Wait for services to be healthy
+          timeout=120
+          while [ $timeout -gt 0 ]; do
+            if curl -f http://localhost:3000/api/status && curl -f http://localhost:3100/ui; then
+              echo "Services are ready"
+              break
+            fi
+            sleep 2
+            timeout=$((timeout-2))
+          done
+          
+          if [ $timeout -le 0 ]; then
+            echo "Services failed to start"
+            exit 1
+          fi
+      
+      - name: Run E2E tests - Core Workflows
+        if: matrix.test-category == 'core'
+        run: |
+          cd tests/e2e
+          npm test -- tests/core-workflows.spec.ts --reporter=html --reporter=github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
+          ORCHESTRATOR_URL: http://localhost:3000
+      
+      - name: Run E2E tests - API Integration
+        if: matrix.test-category == 'api'
+        run: |
+          cd tests/e2e
+          npm run test:api -- --reporter=html --reporter=github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
+          ORCHESTRATOR_URL: http://localhost:3000
+      
+      - name: Run E2E tests - Visual Regression
+        if: matrix.test-category == 'visual'
+        run: |
+          cd tests/e2e
+          npm run test:visual -- --reporter=html --reporter=github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
+      
+      - name: Run E2E tests - Performance
+        if: matrix.test-category == 'performance'
+        run: |
+          cd tests/e2e
+          npm run test:performance -- --reporter=html --reporter=github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.node-version }}-${{ matrix.test-category }}
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 30
+      
+      - name: Upload screenshots (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots-${{ matrix.node-version }}-${{ matrix.test-category }}
+          path: tests/e2e/test-results/
+          retention-days: 7
+      
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Read test results and create PR comment
+            const fs = require('fs');
+            const path = 'tests/e2e/test-results/results.json';
+            
+            if (fs.existsSync(path)) {
+              const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const { stats } = results;
+              
+              const comment = `## 🧪 E2E Test Results (${context.matrix['test-category']}, Node ${context.matrix['node-version']})
+              
+              - ✅ Passed: ${stats.passed}
+              - ❌ Failed: ${stats.failed}  
+              - ⏭️ Skipped: ${stats.skipped}
+              - ⏱️ Duration: ${Math.round(stats.duration / 1000)}s
+              
+              ${stats.failed > 0 ? '⚠️ Some tests failed. Check the logs for details.' : '🎉 All tests passed!'}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+  # Nightly extended testing
+  e2e-extended:
+    name: Extended E2E Testing (Nightly)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    services:
+      neo4j:
+        image: neo4j:5.15
+        env:
+          NEO4J_AUTH: neo4j/password
+          NEO4J_PLUGINS: '["apoc"]'
+        ports:
+          - 7474:7474
+          - 7687:7687
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests/e2e && npm ci
+      
+      - name: Install Playwright browsers
+        run: |
+          cd tests/e2e
+          npx playwright install --with-deps
+      
+      - name: Setup services
+        run: |
+          curl -fsSL https://ollama.ai/install.sh | sh
+          ollama serve &
+          sleep 10
+          ollama pull mxbai-embed-large
+          ./start-services.sh &
+          sleep 30
+      
+      - name: Run full cross-browser test suite
+        run: |
+          cd tests/e2e
+          npm run test:cross-browser -- --reporter=html
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
+          ORCHESTRATOR_URL: http://localhost:3000
+      
+      - name: Run mobile responsiveness tests
+        run: |
+          cd tests/e2e
+          npm run test:mobile -- --reporter=html
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
+      
+      - name: Performance benchmark analysis
+        run: |
+          cd tests/e2e
+          # Run performance tests and generate benchmark report
+          npm run test:performance -- --reporter=json > performance-results.json
+          
+          # Analyze performance trends (if we have historical data)
+          # This could compare against previous benchmark results
+      
+      - name: Upload extended test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extended-test-results
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/performance-results.json
+          retention-days: 90
+      
+      - name: Notify on extended test failures
+        if: failure()
+        run: |
+          # Send notification about nightly test failures
+          echo "Extended E2E tests failed. Manual investigation required."
+          # Could integrate with Slack, email, or other notification systems

@@ -276,6 +276,72 @@ With the test data (5 mock documents):
    - Build domain-specific query templates
    - Add more sophisticated reasoning patterns
 
+---
+
+## 🧪 **NEW: Comprehensive E2E Testing with Playwright**
+
+For thorough QA testing and regression detection, we've implemented a **production-grade Playwright E2E testing suite**:
+
+### **Quick Start E2E Testing**
+```bash
+# Navigate to E2E test directory
+cd tests/e2e
+
+# Install dependencies (one-time setup)
+npm install && npx playwright install
+
+# Run quick smoke tests (2-3 minutes)
+./run-tests.sh smoke
+
+# Run full comprehensive test suite (15-20 minutes)
+./run-tests.sh all
+```
+
+### **Test Categories Available**
+- 🔄 **Core Workflows**: Complete user journeys from setup to querying
+- 🔌 **API Integration**: REST endpoints, MCP tools, authentication testing
+- 📷 **Visual Regression**: UI component screenshots and responsive design
+- ⚡ **Performance Testing**: Load times, memory usage, rendering benchmarks
+- 💨 **Smoke Tests**: Quick validation of essential functionality
+
+### **Development Testing**
+```bash
+# Watch tests run in visible browser
+./run-tests.sh core --headed
+
+# Debug mode with breakpoints
+./run-tests.sh api --debug
+
+# Update visual baselines after UI changes
+./run-tests.sh visual --update-snapshots
+```
+
+### **Comprehensive Coverage**
+The Playwright suite tests:
+- ✅ **Complete Setup Wizard workflows**
+- ✅ **Knowledge base creation and schema configuration**
+- ✅ **Data ingestion and connector management**
+- ✅ **All search interfaces (semantic, graph, GraphRAG)**
+- ✅ **3D graph visualization interactions**
+- ✅ **Real-time monitoring dashboards**
+- ✅ **Error handling and recovery scenarios**
+- ✅ **Cross-browser compatibility (Chrome, Firefox, Safari)**
+- ✅ **Mobile and tablet responsive design**
+- ✅ **Performance benchmarks and memory usage**
+
+### **View Test Results**
+```bash
+# Interactive HTML report with screenshots
+open tests/e2e/playwright-report/index.html
+
+# Or use the built-in viewer
+cd tests/e2e && npm run show-report
+```
+
+**📚 Complete Documentation:** See `tests/e2e/README.md` for full details on the testing architecture, configuration options, and CI/CD integration.
+
+---
+
 ## Support
 
 If you encounter issues:

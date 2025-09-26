@@ -141,3 +141,23 @@ dmypy.json
 # orchestrator/.env
 # langgraph/graph_rag_agent/.env
 web-ui/.eslintrc.js
+
+# Playwright E2E Testing Artifacts (Added for production readiness testing)
+test-results/
+playwright-report/
+playwright/.cache/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+tests/e2e/node_modules/
+tests/*/test-results/
+tests/*/playwright-report/
+tests/*/node_modules/
+**/test-results/
+**/playwright-report/
+
+# Test artifacts and screenshots
+*.png
+*.webm
+*.zip
+trace.zip
+error-context.md

@@ -88,7 +88,29 @@ open http://localhost:8080/docs
 - [Connectors Matrix](./connectors/README.md)  
 - [GraphRAG Guide](./docs/graphrag.md)  
 - [CLI Tools](./docs/cli.md)  
+- [E2E Testing Guide](./tests/e2e/README.md) ⭐ **NEW**
 - [Troubleshooting](./TROUBLESHOOTING.md)  
+
+---
+
+## 🧪 Quality Assurance
+
+Knowledge Graph Brain includes **comprehensive E2E testing** with Playwright for production-grade quality assurance:
+
+```bash
+# Quick validation (2-3 minutes)
+cd tests/e2e && ./run-tests.sh smoke
+
+# Full test suite (15-20 minutes)
+cd tests/e2e && ./run-tests.sh all
+```
+
+**Test Coverage:**
+- ✅ Complete user workflows (setup → ingestion → querying)
+- ✅ API integration testing (REST + MCP tools)  
+- ✅ Visual regression detection (UI components)
+- ✅ Performance benchmarking (load times, memory)
+- ✅ Cross-browser compatibility (Chrome, Firefox, Safari)
 
 ---
 
@@ -97,6 +119,7 @@ open http://localhost:8080/docs
 - [ ] More connectors (Jira, Google Drive, Notion)  
 - [ ] Live graph exploration in Web UI  
 - [ ] Auto-suggested tools from schema analysis  
+- [x] Comprehensive E2E testing suite ✅
 - [ ] Evaluation harness for quality metrics  
 
 ---
@@ -111,4 +134,4 @@ Apache 2.0 — see [LICENSE](./LICENSE)
 
 - Open an [issue](https://github.com/ryandmonk/knowledge_graph_brain/issues) for bugs or feature requests  
 - See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup  
-- For quick testing, see [TESTING.md](./TESTING.md)
+- For testing guides, see [TESTING.md](./TESTING.md) and [E2E Testing](./tests/e2e/README.md)
