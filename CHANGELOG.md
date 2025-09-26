@@ -5,6 +5,33 @@ All notable changes to the Knowledge Graph Brain project will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2025-09-26 - Modal Auto-Close Fix & Production E2E Testing
+
+### Fixed
+- **🔧 Connector Modal Auto-Close Behavior** - Critical UX fix for configuration workflow
+  - **Frontend Issue Resolution**: Fixed missing `onClose?.()` callback in ConnectorConfigModal.tsx after successful save operations
+  - **Systematic Investigation**: Confirmed backend API functionality working correctly, isolated issue to React component lifecycle
+  - **Regression Prevention**: Added comprehensive test coverage for modal auto-close behavior validation
+
+### Added
+- **🧪 Production-Ready E2E Testing Infrastructure** - Enterprise-grade testing with real API credentials
+  - **Real Connector Testing**: GitHub and Confluence integration tests with actual API token validation
+  - **Credential Management**: Interactive setup script (`setup-credentials.sh`) and verification utilities (`verify-credentials.sh`)
+  - **Security-First Approach**: Proper environment variable handling with GitHub push protection compliance
+  - **Comprehensive Documentation**: Complete setup guide (`CREDENTIAL_TESTING_GUIDE.md`) with troubleshooting
+  
+- **✨ Progressive Enhancement Testing** - Advanced UI testing for tabbed setup wizard
+  - **Accessible Navigation**: Tab-based setup wizard with status indicators and error state management
+  - **Form Validation**: Sophisticated form change detection with masked credential field handling
+  - **Cross-Browser Support**: Chrome, Firefox, Safari compatibility testing with production workflows
+  - **Test Infrastructure**: Flexible demo vs production mode testing with proper npm script organization
+
+### Security
+- **🔐 Enhanced Credential Security** - Protected secrets management and validation
+  - **Push Protection**: Automatic prevention of credential exposure in git commits
+  - **API Rate Limiting**: Monitoring and quota validation for GitHub and Confluence APIs  
+  - **Environment Isolation**: Secure credential storage with validation and health check scripts
+
 ## [0.20.0] - 2025-09-11 - Phase 2.2: Revolutionary 3D Analytics & Advanced UX
 
 ### Added
