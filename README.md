@@ -1,3 +1,5 @@
+[![MSeeP.ai Security Assessment Badge](https://mseep.net/pr/ryandmonk-knowledge-graph-brain-badge.png)](https://mseep.ai/app/ryandmonk-knowledge-graph-brain)
+
 <div align="center">
   <img src="./assets/logo.png" alt="Knowledge Graph Brain Logo" width="180"/>
 
