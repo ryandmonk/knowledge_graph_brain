@@ -4,23 +4,29 @@
 # Knowledge Graph Brain
 </div>
 
-> **Enterprise-ready knowledge graph platform that unifies data silos into intelligent, trustworthy RAG workflows — with complete audit trails, security management, and visual connector building.**
+**An early-stage, composable knowledge graph system for building structured, traceable GraphRAG and agent workflows across multiple data sources.**
+
+Knowledge Graph Brain is a system-level foundation for ingesting, structuring, and querying organizational knowledge using a hybrid of graphs and embeddings. It is designed for experimentation, extension, and clarity rather than turnkey deployment.
 
 ---
 
-## ✨ What It Does
+## What It Does
 
-- **Connect** multiple systems (Confluence, GitHub, Slack…) with declarative YAML schemas  
-- **Ingest** into Neo4j with vector embeddings and provenance tracking  
-- **Query** using hybrid GraphRAG (semantic + graph reasoning)  
-- **Expose** everything as MCP tools or REST APIs for your favorite clients
-- **Secure** with enterprise-grade RBAC, audit trails, and access control
-- **Monitor** with real-time WebSocket dashboards and performance metrics
-- **Build** custom connectors visually from OpenAPI specifications with AI assistance  
+Knowledge Graph Brain provides building blocks for assembling trustworthy RAG and agent systems:
+
+- **Connect** multiple systems (Confluence, GitHub, Slack, etc.) using declarative YAML schemas
+- **Ingest** data into Neo4j with vector embeddings and explicit provenance tracking
+- **Query** using hybrid GraphRAG techniques that combine semantic search with graph traversal
+- **Expose** capabilities as MCP tools or REST/OpenAPI endpoints
+- **Manage access and visibility** through configurable role and policy primitives (work in progress)
+- **Observe system behavior** via logs and basic real-time UI indicators
+- **Prototype connectors** visually from OpenAPI specifications with AI-assisted scaffolding
+
+The project emphasizes transparency in how knowledge is represented, transformed, and retrieved.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # 1. Clone and install
@@ -31,46 +37,52 @@ cd knowledge_graph_brain && npm install
 ./start-services.sh
 
 # 3. Register schema & ingest data
-curl -X POST http://localhost:3000/api/register-schema-yaml -d '{"kb_id":"demo","yaml_content":"...'"}'
-curl -X POST http://localhost:3000/api/ingest -d '{"kb_id":"demo"}'
+curl -X POST http://localhost:3000/api/register-schema-yaml \
+  -d '{"kb_id":"demo","yaml_content":"..."}'
+
+curl -X POST http://localhost:3000/api/ingest \
+  -d '{"kb_id":"demo"}'
 
 # 4. Ask your first question
 node cli query --kb_id=demo "What changed in ENG space this week?"
 ```
 
-> 💡 See full [Setup Guide](./docs/DEPLOYMENT.md) for detailed instructions and prerequisites.
+See the full [Setup Guide](./docs/DEPLOYMENT.md) for prerequisites, environment configuration, and troubleshooting.
 
 ---
 
-## 🖥 Web Setup Wizard
+## Web Setup Wizard
 
-Prefer point-and-click? Launch the React-based setup UI:
+A lightweight React-based setup UI is included for exploration and local development:
 
 ```bash
 cd orchestrator && DEMO_MODE=true npm run dev
 open http://localhost:3000/ui
 ```
 
-- **Real-time Health**: Neo4j, Ollama, connectors at a glance  
-- **Visual Config**: Add connectors without editing files  
-- **Demo Mode**: Explore with mock data instantly  
+Features include:
+- Service visibility for Neo4j, connectors, and ingestion status
+- Visual configuration for schemas and connectors
+- Demo mode using mock data
+
+This UI is intended as a development and learning aid rather than a finished administration console.
 
 ---
 
-## 🔌 MCP + API Integration
+## MCP and API Integration
 
-Knowledge Graph Brain ships with a **Universal MCP Server** exposing 16 tools:
+Knowledge Graph Brain includes a Universal MCP Server that exposes system capabilities as tools:
 
-- 🔍 **Knowledge Query:** `ask_knowledge_graph`, `search_semantic`, `explore_relationships`  
-- ⚙️ **Management:** `list_knowledge_bases`, `add_data_source`, `start_ingestion`  
-- 🔎 **Discovery:** `explore_schema`, `find_patterns`, `get_overview`
+- **Knowledge access**: `ask_knowledge_graph`, `search_semantic`, `explore_relationships`
+- **Lifecycle management**: `list_knowledge_bases`, `add_data_source`, `start_ingestion`
+- **Schema exploration**: `explore_schema`, `find_patterns`, `get_overview`
 
-Use with:
-- [Open WebUI](https://openwebui.com)
-- [Claude Desktop](https://claude.ai/download)
-- [VS Code MCP Extensions](https://github.com/modelcontextprotocol)
+These tools can be used with MCP-compatible clients such as:
+- Open WebUI
+- Claude Desktop
+- VS Code MCP extensions
 
-Or convert to REST/OpenAPI:
+The same surface can be exposed as REST/OpenAPI:
 
 ```bash
 cd mcp-server && npm run build
@@ -78,60 +90,73 @@ cd mcp-server && npm run build
 open http://localhost:8080/docs
 ```
 
-📖 [Complete MCP & OpenAPI Guide](./docs/openapi-integration.md)
+See the [MCP and OpenAPI Integration Guide](./docs/openapi-integration.md) for details.
 
 ---
 
-## 📚 Documentation
+## Documentation
 
-- [Architecture](./docs/ARCHITECTURE.md)  
-- [Connectors Matrix](./connectors/README.md)  
-- [GraphRAG Guide](./docs/graphrag.md)  
-- [CLI Tools](./docs/cli.md)  
-- [E2E Testing Guide](./tests/e2e/README.md) ⭐ **NEW**
-- [Troubleshooting](./TROUBLESHOOTING.md)  
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Connectors Matrix](./connectors/README.md)
+- [GraphRAG Guide](./docs/graphrag.md)
+- [CLI Tools](./docs/cli.md)
+- [E2E Testing Guide](./tests/e2e/README.md)
+- [Troubleshooting](./TROUBLESHOOTING.md)
 
 ---
 
-## 🧪 Quality Assurance
+## Quality Assurance
 
-Knowledge Graph Brain includes **comprehensive E2E testing** with Playwright for production-grade quality assurance:
+The project includes an end-to-end testing harness using Playwright to validate core workflows during development:
 
 ```bash
-# Quick validation (2-3 minutes)
+# Quick validation
 cd tests/e2e && ./run-tests.sh smoke
 
-# Full test suite (15-20 minutes)
+# Full test suite
 cd tests/e2e && ./run-tests.sh all
 ```
 
-**Test Coverage:**
-- ✅ Complete user workflows (setup → ingestion → querying)
-- ✅ API integration testing (REST + MCP tools)  
-- ✅ Visual regression detection (UI components)
-- ✅ Performance benchmarking (load times, memory)
-- ✅ Cross-browser compatibility (Chrome, Firefox, Safari)
+Coverage focuses on:
+- Core workflows (setup, ingestion, querying)
+- API surface validation (REST and MCP tools)
+- UI smoke coverage
+- Basic performance and stability checks
+
+This test suite supports refactoring and iteration rather than certifying production readiness.
 
 ---
 
-## 🛠 Roadmap
+## Roadmap
 
-- [ ] More connectors (Jira, Google Drive, Notion)  
-- [ ] Live graph exploration in Web UI  
-- [ ] Auto-suggested tools from schema analysis  
-- [x] Comprehensive E2E testing suite ✅
-- [ ] Evaluation harness for quality metrics  
-
----
-
-## 📄 License
-
-Apache 2.0 — see [LICENSE](./LICENSE)
+- [ ] Additional connectors (Jira, Google Drive, Notion)
+- [ ] Interactive graph exploration in the Web UI
+- [ ] Schema-driven tool suggestion
+- [x] End-to-end testing harness
+- [ ] Evaluation and quality scoring framework
 
 ---
 
-## 🙋 Support & Contributing
+## What This Project Is Not
 
-- Open an [issue](https://github.com/ryandmonk/knowledge_graph_brain/issues) for bugs or feature requests  
-- See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup  
-- For testing guides, see [TESTING.md](./TESTING.md) and [E2E Testing](./tests/e2e/README.md)
+- A turnkey enterprise search product
+- A hosted SaaS offering
+- A compliance-certified or security-audited system
+- A drop-in replacement for a vector database
+
+Knowledge Graph Brain is best suited for system builders, researchers, and teams exploring structured approaches to RAG and agent memory.
+
+---
+
+## License
+
+Apache 2.0. See [LICENSE](./LICENSE).
+
+---
+
+## Support and Contributing
+
+- Open an issue for bugs or feature requests
+- See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup
+- Testing documentation lives in [TESTING.md](./TESTING.md) and the E2E guide
+
