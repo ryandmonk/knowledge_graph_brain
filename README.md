@@ -6,7 +6,8 @@
 
 **An early-stage, composable knowledge graph system for building structured, traceable GraphRAG and agent workflows across multiple data sources.**
 
-Knowledge Graph Brain is a system-level foundation for ingesting, structuring, and querying organizational knowledge using a hybrid of graphs and embeddings. It is designed for experimentation, extension, and clarity rather than turnkey deployment.
+> **Project Status: Experimental / Pre-release**
+> This project is under active development. APIs, schemas, and configuration may change between versions. It is designed for experimentation and extension, not turnkey deployment.
 
 ---
 
@@ -18,11 +19,18 @@ Knowledge Graph Brain provides building blocks for assembling trustworthy RAG an
 - **Ingest** data into Neo4j with vector embeddings and explicit provenance tracking
 - **Query** using hybrid GraphRAG techniques that combine semantic search with graph traversal
 - **Expose** capabilities as MCP tools or REST/OpenAPI endpoints
-- **Manage access and visibility** through configurable role and policy primitives (work in progress)
-- **Observe system behavior** via logs and basic real-time UI indicators
+- **Persist** registered schemas to Neo4j so they survive restarts
 - **Prototype connectors** visually from OpenAPI specifications with AI-assisted scaffolding
 
 The project emphasizes transparency in how knowledge is represented, transformed, and retrieved.
+
+---
+
+## Prerequisites
+
+- **Node.js 18+**
+- **Neo4j 5** — via [Neo4j Desktop](https://neo4j.com/download/) or Docker
+- **Ollama** — for local embeddings (`ollama pull mxbai-embed-large`) and LLM (`ollama pull qwen3:8b`)
 
 ---
 
@@ -31,23 +39,40 @@ The project emphasizes transparency in how knowledge is represented, transformed
 ```bash
 # 1. Clone and install
 git clone https://github.com/ryandmonk/knowledge_graph_brain.git
-cd knowledge_graph_brain && npm install
+cd knowledge_graph_brain
 
-# 2. Start services (Neo4j, orchestrator, connectors)
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your Neo4j credentials and preferences
+
+# 3. Install dependencies
+cd orchestrator && npm install && cd ..
+cd connectors/retail-mock && npm install && cd ../..
+
+# 4. Start services (requires Neo4j running + Ollama for embeddings)
 ./start-services.sh
 
-# 3. Register schema & ingest data
+# 5. Register a schema and ingest demo data
 curl -X POST http://localhost:3000/api/register-schema-yaml \
-  -d '{"kb_id":"demo","yaml_content":"..."}'
+  -H "Content-Type: application/json" \
+  -d @- <<'EOF'
+{
+  "kb_id": "retail-demo",
+  "yaml_content": "$(cat examples/retail.yaml)"
+}
+EOF
 
 curl -X POST http://localhost:3000/api/ingest \
-  -d '{"kb_id":"demo"}'
+  -H "Content-Type: application/json" \
+  -d '{"kb_id":"retail-demo","source_id":"products"}'
 
-# 4. Ask your first question
-node cli query --kb_id=demo "What changed in ENG space this week?"
+# 6. Query your graph
+curl -X POST http://localhost:3000/api/search-graph \
+  -H "Content-Type: application/json" \
+  -d '{"kb_id":"retail-demo","cypher":"MATCH (p:Product) RETURN p LIMIT 5"}'
 ```
 
-See the full [Setup Guide](./docs/DEPLOYMENT.md) for prerequisites, environment configuration, and troubleshooting.
+See the full [Setup Guide](./docs/DEPLOYMENT.md) for environment configuration and troubleshooting.
 
 ---
 
@@ -56,16 +81,32 @@ See the full [Setup Guide](./docs/DEPLOYMENT.md) for prerequisites, environment 
 A lightweight React-based setup UI is included for exploration and local development:
 
 ```bash
-cd orchestrator && DEMO_MODE=true npm run dev
-open http://localhost:3000/ui
+cd web-ui && npm install && npm run dev
+# Then open http://localhost:3100
+# Or access via the orchestrator at http://localhost:3000/ui (after building)
 ```
 
 Features include:
-- Service visibility for Neo4j, connectors, and ingestion status
+- Service health visibility for Neo4j, connectors, and ingestion status
 - Visual configuration for schemas and connectors
 - Demo mode using mock data
+- 3D graph visualization
 
-This UI is intended as a development and learning aid rather than a finished administration console.
+This UI is a development and learning aid, not a finished administration console.
+
+---
+
+## Docker
+
+```bash
+# Start Neo4j, Ollama, orchestrator, and all connectors
+docker compose -f infra/docker-compose.yml up
+
+# Neo4j Browser: http://localhost:7474
+# Orchestrator:  http://localhost:3000
+```
+
+The Docker Compose setup includes health checks and waits for Neo4j to be ready before starting the orchestrator.
 
 ---
 
@@ -77,10 +118,7 @@ Knowledge Graph Brain includes a Universal MCP Server that exposes system capabi
 - **Lifecycle management**: `list_knowledge_bases`, `add_data_source`, `start_ingestion`
 - **Schema exploration**: `explore_schema`, `find_patterns`, `get_overview`
 
-These tools can be used with MCP-compatible clients such as:
-- Open WebUI
-- Claude Desktop
-- VS Code MCP extensions
+Compatible with MCP clients including Open WebUI, Claude Desktop, and VS Code MCP extensions.
 
 The same surface can be exposed as REST/OpenAPI:
 
@@ -97,33 +135,27 @@ See the [MCP and OpenAPI Integration Guide](./docs/openapi-integration.md) for d
 ## Documentation
 
 - [Architecture](./docs/ARCHITECTURE.md)
+- [Deployment Guide](./docs/DEPLOYMENT.md)
 - [Connectors Matrix](./connectors/README.md)
+- [Schema DSL Reference](./docs/dsl.md)
 - [GraphRAG Guide](./docs/graphrag.md)
 - [CLI Tools](./docs/cli.md)
-- [E2E Testing Guide](./tests/e2e/README.md)
+- [API Reference](./docs/API.md)
 - [Troubleshooting](./TROUBLESHOOTING.md)
 
 ---
 
-## Quality Assurance
-
-The project includes an end-to-end testing harness using Playwright to validate core workflows during development:
+## Testing
 
 ```bash
-# Quick validation
-cd tests/e2e && ./run-tests.sh smoke
+# Unit tests
+cd orchestrator && npm test
 
-# Full test suite
-cd tests/e2e && ./run-tests.sh all
+# E2E tests (requires running services)
+cd tests/e2e && ./run-tests.sh smoke
 ```
 
-Coverage focuses on:
-- Core workflows (setup, ingestion, querying)
-- API surface validation (REST and MCP tools)
-- UI smoke coverage
-- Basic performance and stability checks
-
-This test suite supports refactoring and iteration rather than certifying production readiness.
+Coverage focuses on schema parsing, connector mapping, idempotent ingestion, and UI smoke tests. This test suite supports refactoring and iteration, not production certification.
 
 ---
 
@@ -132,8 +164,10 @@ This test suite supports refactoring and iteration rather than certifying produc
 - [ ] Additional connectors (Jira, Google Drive, Notion)
 - [ ] Interactive graph exploration in the Web UI
 - [ ] Schema-driven tool suggestion
+- [x] Schema persistence to Neo4j
 - [x] End-to-end testing harness
 - [ ] Evaluation and quality scoring framework
+- [ ] Published npm package / Docker image
 
 ---
 
@@ -159,4 +193,3 @@ Apache 2.0. See [LICENSE](./LICENSE).
 - Open an issue for bugs or feature requests
 - See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup
 - Testing documentation lives in [TESTING.md](./TESTING.md) and the E2E guide
-

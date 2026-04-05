@@ -2,7 +2,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import http from 'http';
-import { server, registeredSchemas } from './capabilities';
+import { server, registeredSchemas, hydrateFromNeo4j } from './capabilities';
+import { persistSchema } from './persistence/schema-store';
 import { initDriver, setupKB, mergeNodesAndRels, executeCypher, getDriver, semanticSearch } from './ingest';
 import { parseSchema, applyMapping } from './dsl';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -39,17 +40,20 @@ async function initializeGraphRAGAgent() {
 // Initialize services
 async function initializeServices() {
   try {
-    // Initialize Neo4j driver
-    initDriver();
+    // Initialize Neo4j driver and run migrations
+    await initDriver();
     console.log('✅ Neo4j driver initialized');
-    
+
+    // Hydrate schemas from Neo4j (must happen after migrations)
+    await hydrateFromNeo4j();
+
     // Initialize authentication service
     initAuthService();
     console.log('✅ Authentication service initialized');
-    
+
     // Initialize GraphRAG agent asynchronously
     await initializeGraphRAGAgent();
-    
+
   } catch (error) {
     console.error('❌ Service initialization failed:', error);
     process.exit(1);
@@ -140,14 +144,19 @@ app.post('/api/register-schema', async (req: Request, res: Response) => {
     
     // Store the schema in memory for the MCP system
     registeredSchemas.set(kb_id, schema);
-    
+
     // Setup the knowledge base in Neo4j
     await setupKB(kb_id, schema);
-    
+
+    // Persist schema to Neo4j (fire-and-forget)
+    persistSchema(kb_id, schema, schema_yaml).catch(err =>
+      console.error('Failed to persist schema:', err)
+    );
+
     console.log(`✅ Schema registered for KB: ${kb_id}`);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Schema registered successfully',
       kb_id: kb_id,
       nodes: schema.schema.nodes.length,
@@ -180,14 +189,19 @@ app.post('/api/register-schema-yaml', async (req: Request, res: Response) => {
     
     // Store the schema in memory for the MCP system
     registeredSchemas.set(kb_id, schema);
-    
+
     // Setup the knowledge base in Neo4j
     await setupKB(kb_id, schema);
-    
+
+    // Persist schema to Neo4j (fire-and-forget)
+    persistSchema(kb_id, schema, yaml_content).catch(err =>
+      console.error('Failed to persist schema:', err)
+    );
+
     console.log(`✅ Schema registered for KB: ${kb_id} via YAML endpoint`);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Schema registered successfully from YAML',
       kb_id: kb_id,
       embedding_provider: schema.embedding.provider,

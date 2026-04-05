@@ -4,6 +4,7 @@ services:
   neo4j:
     image: neo4j:5
     container_name: neo4j
+    restart: unless-stopped
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_PLUGINS=["apoc", "graph-data-science"]
@@ -15,20 +16,52 @@ services:
       - neo4j_logs:/logs
       - neo4j_import:/var/lib/neo4j/import
       - neo4j_plugins:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - kgb-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - kgb-net
 
   orchestrator:
     build:
       context: ../orchestrator
       dockerfile: Dockerfile
     container_name: orchestrator
+    restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - ../.env
     environment:
       - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password
+      - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
-      - neo4j
+      neo4j:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - kgb-net
 
   confluence-connector:
     build:
@@ -36,9 +69,15 @@ services:
       dockerfile: Dockerfile
     container_name: confluence-connector
     ports:
-      - "3001:3001"
+      - "3004:3004"
+    env_file:
+      - ../.env
     environment:
-      - PORT=3001
+      - PORT=3004
+    depends_on:
+      - orchestrator
+    networks:
+      - kgb-net
 
   github-connector:
     build:
@@ -46,10 +85,15 @@ services:
       dockerfile: Dockerfile
     container_name: github-connector
     ports:
-      - "3002:3002"
+      - "3001:3001"
+    env_file:
+      - ../.env
     environment:
-      - PORT=3002
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - PORT=3001
+    depends_on:
+      - orchestrator
+    networks:
+      - kgb-net
 
   slack-connector:
     build:
@@ -58,10 +102,14 @@ services:
     container_name: slack-connector
     ports:
       - "3003:3003"
+    env_file:
+      - ../.env
     environment:
       - PORT=3003
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_WORKSPACE=${SLACK_WORKSPACE}
+    depends_on:
+      - orchestrator
+    networks:
+      - kgb-net
 
   retail-connector:
     build:
@@ -72,9 +120,18 @@ services:
       - "8081:8081"
     environment:
       - PORT=8081
+    depends_on:
+      - orchestrator
+    networks:
+      - kgb-net
 
 volumes:
   neo4j_data:
   neo4j_logs:
   neo4j_import:
   neo4j_plugins:
+  ollama_data:
+
+networks:
+  kgb-net:
+    driver: bridge

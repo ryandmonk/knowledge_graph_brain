@@ -31,14 +31,12 @@ const NEO4J_DATABASE = process.env.NEO4J_DATABASE || 'neo4j';
 let driver: Driver;
 let migrationRunner: MigrationRunner;
 
-export function initDriver(): void {
+export async function initDriver(): Promise<void> {
   driver = neo4j.driver(NEO4J_URI, neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD));
   migrationRunner = new MigrationRunner(driver);
-  
-  // Initialize database with migrations on startup
-  migrationRunner.initializeDatabase().catch(error => {
-    console.error('❌ Failed to initialize database:', error);
-  });
+
+  // Initialize database with migrations on startup (awaited so hydration can follow)
+  await migrationRunner.initializeDatabase();
 }
 
 export function getDriver(): Driver {

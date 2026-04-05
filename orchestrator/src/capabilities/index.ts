@@ -6,6 +6,7 @@ import { ConnectorClient } from '../connectors/index';
 import { mergeNodesAndRels, semanticSearch, executeCypher, getDriver } from '../ingest/index';
 import { EmbeddingProviderFactory } from '../embeddings/index';
 import { startRun, updateRunStats, completeRun, addRunError, getKnowledgeBaseStatus } from '../status/index';
+import { persistSchema, persistSource, loadAllSchemasAndSources } from '../persistence/schema-store';
 
 /**
  * Generate embeddings for nodes that don't have them yet
@@ -178,12 +179,17 @@ server.registerTool(
       // Store the parsed schema
       registeredSchemas.set(kb_id, schema);
 
+      // Persist to Neo4j (fire-and-forget)
+      persistSchema(kb_id, schema, schema_yaml).catch(err =>
+        console.error('Failed to persist schema:', err)
+      );
+
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ 
-              ok: true, 
+            text: JSON.stringify({
+              ok: true,
               kb_id: schema.kb_id,
               nodes_count: schema.schema.nodes.length,
               relationships_count: schema.schema.relationships.length,
@@ -248,13 +254,13 @@ server.registerTool(
     }
 
     const sourceKey = `${kb_id}:${source_id}`;
-    registeredSources.set(sourceKey, {
-      kb_id,
-      source_id,
-      connector_url,
-      auth_ref,
-      mapping_name,
-    });
+    const sourceConfig = { kb_id, source_id, connector_url, auth_ref, mapping_name };
+    registeredSources.set(sourceKey, sourceConfig);
+
+    // Persist to Neo4j (fire-and-forget)
+    persistSource(sourceKey, sourceConfig).catch(err =>
+      console.error('Failed to persist source:', err)
+    );
 
     return {
       content: [
@@ -582,6 +588,25 @@ server.registerTool(
     }
   }
 );
+
+/**
+ * Hydrate in-memory schema and source Maps from Neo4j on startup.
+ * Must be called after initDriver() completes (migrations applied).
+ */
+export async function hydrateFromNeo4j(): Promise<void> {
+  try {
+    const { schemas, sources } = await loadAllSchemasAndSources();
+    for (const [key, schema] of schemas) {
+      registeredSchemas.set(key, schema);
+    }
+    for (const [key, source] of sources) {
+      registeredSources.set(key, source);
+    }
+    console.log(`✅ Hydrated ${schemas.size} schema(s) and ${sources.size} source(s) from Neo4j`);
+  } catch (error) {
+    console.error('⚠️ Failed to hydrate schemas from Neo4j (starting with empty Maps):', error);
+  }
+}
 
 // Export the server instance and types for use in other modules
 export { server, registeredSchemas, registeredSources };

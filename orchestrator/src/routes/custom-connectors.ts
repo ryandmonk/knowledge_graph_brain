@@ -3,7 +3,8 @@ import { OpenAPIParser } from '../services/openapi-parser';
 import { LLMSchemaAnalyzer } from '../services/llm-schema-analyzer';
 import { SchemaDSLValidator } from '../dsl/validator';
 import { parse as parseYaml } from 'yaml';
-import { registeredSchemas } from '../capabilities'; // Import from capabilities module
+import { registeredSchemas } from '../capabilities';
+import { persistSchema, deletePersistedSchema } from '../persistence/schema-store';
 
 const router = express.Router();
 const llmAnalyzer = new LLMSchemaAnalyzer();
@@ -479,6 +480,11 @@ router.post('/register', async (req, res) => {
     // Register schema in global registry (existing pattern)
     registeredSchemas.set(kb_id, schema);
 
+    // Persist to Neo4j (fire-and-forget)
+    persistSchema(kb_id, schema, schema_yaml).catch(err =>
+      console.error('Failed to persist custom connector schema:', err)
+    );
+
     res.json({
       success: true,
       message: `Custom connector schema registered successfully for kb_id: ${kb_id}`,
@@ -595,6 +601,11 @@ router.delete('/:kb_id', async (req, res) => {
     }
 
     registeredSchemas.delete(kb_id);
+
+    // Remove from Neo4j (fire-and-forget)
+    deletePersistedSchema(kb_id).catch(err =>
+      console.error('Failed to delete persisted schema:', err)
+    );
 
     res.json({
       success: true,
